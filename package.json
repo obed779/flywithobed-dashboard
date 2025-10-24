@@ -1,0 +1,10 @@
+{
+  "name": "flywithobed-dashboard",
+  "version": "1.0.0",
+  "description": "FlyWithObed Aviator Dashboard Live",
+  "main": "dashboard.html",
+  "scripts": {},
+  "keywords": ["aviator", "dashboard", "flywithobed"],
+  "author": "Obed",
+  "license": "MIT"
+}
