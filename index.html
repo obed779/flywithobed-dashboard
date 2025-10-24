@@ -97,7 +97,8 @@
 
     socket.onclose = () => {
       statusEl.textContent = "❌ Disconnected. Reconnecting...";
-      setTimeout(() => location.reload(), 3000);
+ const socket = io("https://obedaviator.onrender.com");
+
     };
   </script>
 </body>
