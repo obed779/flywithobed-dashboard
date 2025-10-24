@@ -8,10 +8,11 @@
   <style>
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: #0e0e0e;
+      background: radial-gradient(circle at center, #121212, #000);
       color: #fff;
       margin: 0;
       padding: 0;
+      overflow-x: hidden;
     }
     header {
       text-align: center;
@@ -27,13 +28,31 @@
       padding: 30px;
     }
     .status {
-      margin-bottom: 20px;
+      margin-bottom: 10px;
       font-size: 1.2em;
     }
     .multiplier {
       font-size: 2.5em;
       color: #00e676;
-      margin-bottom: 15px;
+      margin-bottom: 5px;
+    }
+    .plane-area {
+      position: relative;
+      width: 90%;
+      height: 250px;
+      background: linear-gradient(180deg, #101010, #050505);
+      border: 1px solid #222;
+      border-radius: 10px;
+      margin-top: 20px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(255,255,255,0.1);
+    }
+    .plane {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      font-size: 2em;
+      transition: transform 0.1s linear;
     }
     .players {
       display: flex;
@@ -48,9 +67,7 @@
       text-align: center;
       box-shadow: 0 0 10px rgba(255,255,255,0.1);
     }
-    .player h2 {
-      margin-top: 0;
-    }
+    .player h2 { margin-top: 0; }
     button {
       margin-top: 10px;
       padding: 8px 14px;
@@ -60,9 +77,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    button:hover {
-      background: #3700b3;
-    }
+    button:hover { background: #3700b3; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -85,6 +100,14 @@
       overflow-y: auto;
       max-height: 200px;
     }
+    .crash {
+      color: #ff1744;
+      animation: blink 0.3s alternate infinite;
+    }
+    @keyframes blink {
+      from { opacity: 1; }
+      to { opacity: 0.3; }
+    }
   </style>
 </head>
 <body>
@@ -94,6 +117,10 @@
     <div class="status">Status: <span id="status">connecting...</span></div>
     <div class="multiplier">Multiplier: <span id="multiplier">1.00x</span></div>
     <div>Round: <span id="round">—</span></div>
+
+    <div class="plane-area" id="plane-area">
+      <div class="plane" id="plane">🛩️</div>
+    </div>
 
     <div class="players">
       <div class="player">
@@ -113,9 +140,7 @@
 
     <h3>📈 History — Recent rounds</h3>
     <table id="history">
-      <thead>
-        <tr><th>Round</th><th>Crash Point</th></tr>
-      </thead>
+      <thead><tr><th>Round</th><th>Crash Point</th></tr></thead>
       <tbody></tbody>
     </table>
 
@@ -128,6 +153,12 @@
     const roundEl = document.getElementById("round");
     const historyBody = document.querySelector("#history tbody");
     const logEl = document.getElementById("log");
+    const plane = document.getElementById("plane");
+    const planeArea = document.getElementById("plane-area");
+
+    let planeX = 0;
+    let planeY = 0;
+    let inFlight = false;
 
     const socket = new WebSocket("wss://obedaviator-cdz2.onrender.com");
 
@@ -150,21 +181,64 @@
 
     socket.addEventListener("error", (err) => {
       statusEl.textContent = "⚠️ Connection error";
-      log("WebSocket error: " + err);
+      log("WebSocket error");
     });
 
     socket.addEventListener("message", (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "multiplier") {
-          multiplierEl.textContent = data.value.toFixed(2) + "x";
-        } else if (data.type === "round") {
+        if (data.type === "round") {
           roundEl.textContent = data.round;
+          resetPlane();
+        } else if (data.type === "multiplier") {
+          multiplierEl.textContent = data.value.toFixed(2) + "x";
+          animatePlane(data.value);
         } else if (data.type === "crash") {
+          inFlight = false;
+          crashPlane(data.point);
           const tr = document.createElement("tr");
           tr.innerHTML = `<td>${data.round}</td><td>${data.point.toFixed(2)}x</td>`;
           historyBody.prepend(tr);
-        } else if (data.type === "log") {
-          log(data.message);
-        }
-      } catch
+        } else if (data.type === "log") log(data.message);
+      } catch {
+        log("Invalid message received");
+      }
+    });
+
+    function placeBet(player) {
+      socket.send(JSON.stringify({ action: "bet", player }));
+      log(`🟢 Player ${player} placed a bet`);
+    }
+
+    function cashout(player) {
+      socket.send(JSON.stringify({ action: "cashout", player }));
+      log(`💰 Player ${player} cashed out`);
+    }
+
+    // --- Animation logic ---
+    function animatePlane(multiplier) {
+      if (!inFlight) inFlight = true;
+      const maxX = planeArea.offsetWidth - 40;
+      const maxY = planeArea.offsetHeight - 40;
+      planeX = Math.min(maxX, multiplier * 40);
+      planeY = Math.min(maxY, multiplier * 15);
+      plane.style.transform = `translate(${planeX}px, -${planeY}px) rotate(${multiplier * 5}deg)`;
+    }
+
+    function crashPlane(crashPoint) {
+      plane.classList.add("crash");
+      log(`💥 Plane crashed at ${crashPoint.toFixed(2)}x`);
+      setTimeout(() => {
+        resetPlane();
+      }, 2000);
+    }
+
+    function resetPlane() {
+      plane.classList.remove("crash");
+      plane.style.transform = "translate(0px, 0px)";
+      planeX = 0;
+      planeY = 0;
+    }
+  </script>
+</body>
+</html>
