@@ -1,4 +1,7 @@
 {
   "root": ".",
-  "cleanUrls": false
+  "cleanUrls": false,
+  "routes": {
+    "/": "dashboard.html"
+  }
 }
