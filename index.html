@@ -7,237 +7,129 @@
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: radial-gradient(circle at center, #121212, #000);
-      color: #fff;
+      font-family: "Segoe UI", sans-serif;
+      background-color: #0b0d10;
+      color: #f1f1f1;
+      text-align: center;
       margin: 0;
-      padding: 0;
-      overflow-x: hidden;
-    }
-    header {
-      text-align: center;
       padding: 20px;
-      background: linear-gradient(90deg, #d81b60, #8e24aa);
-      font-size: 1.3em;
-      font-weight: bold;
     }
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 30px;
-    }
-    .status {
-      margin-bottom: 10px;
-      font-size: 1.2em;
-    }
-    .multiplier {
-      font-size: 2.5em;
-      color: #00e676;
-      margin-bottom: 5px;
-    }
-    .plane-area {
-      position: relative;
-      width: 90%;
+    h1 { color: #00b3ff; }
+    #flight {
+      width: 100%;
       height: 250px;
-      background: linear-gradient(180deg, #101010, #050505);
-      border: 1px solid #222;
-      border-radius: 10px;
-      margin-top: 20px;
+      background: linear-gradient(180deg, #111, #0b0d10);
+      border: 1px solid #333;
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 0 20px rgba(255,255,255,0.1);
+      position: relative;
+      margin-bottom: 20px;
     }
-    .plane {
+    #plane {
       position: absolute;
-      left: 0;
-      bottom: 0;
-      font-size: 2em;
-      transition: transform 0.1s linear;
+      left: 20px;
+      bottom: 10px;
+      font-size: 2rem;
+      transition: bottom 0.2s linear;
     }
-    .players {
-      display: flex;
-      gap: 60px;
-      margin-top: 20px;
-    }
-    .player {
-      background: #1a1a1a;
-      padding: 20px;
-      border-radius: 10px;
-      width: 220px;
-      text-align: center;
-      box-shadow: 0 0 10px rgba(255,255,255,0.1);
-    }
-    .player h2 { margin-top: 0; }
     button {
-      margin-top: 10px;
-      padding: 8px 14px;
-      background: #6200ea;
-      color: white;
+      background: #007bff;
       border: none;
-      border-radius: 5px;
+      padding: 8px 16px;
+      margin: 5px;
+      border-radius: 8px;
+      color: white;
       cursor: pointer;
     }
-    button:hover { background: #3700b3; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 30px;
-      color: #ddd;
-    }
-    th, td {
-      border-bottom: 1px solid #333;
-      padding: 8px;
-      text-align: left;
-    }
-    .connection-log {
-      margin-top: 20px;
-      font-size: 0.9em;
+    .log {
       background: #111;
       padding: 10px;
-      width: 80%;
-      max-width: 600px;
       border-radius: 8px;
+      border: 1px solid #333;
+      text-align: left;
+      max-height: 150px;
       overflow-y: auto;
-      max-height: 200px;
-    }
-    .crash {
-      color: #ff1744;
-      animation: blink 0.3s alternate infinite;
-    }
-    @keyframes blink {
-      from { opacity: 1; }
-      to { opacity: 0.3; }
     }
   </style>
 </head>
 <body>
-  <header>✈️ FlyWithObed Live Aviator Dashboard<br><small>Production — connected to your live backend</small></header>
+  <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
+  <p>Status: <span id="status">connecting...</span></p>
+  <p>Multiplier: <span id="multiplier">1.00x</span></p>
+  <p>Round: <span id="round">—</span></p>
 
-  <div class="container">
-    <div class="status">Status: <span id="status">connecting...</span></div>
-    <div class="multiplier">Multiplier: <span id="multiplier">1.00x</span></div>
-    <div>Round: <span id="round">—</span></div>
-
-    <div class="plane-area" id="plane-area">
-      <div class="plane" id="plane">🛩️</div>
-    </div>
-
-    <div class="players">
-      <div class="player">
-        <h2>👨‍✈️ Player A</h2>
-        <p>Balance: $<span id="balanceA">1000</span></p>
-        <button onclick="placeBet('A')">Bet</button>
-        <button onclick="cashout('A')">Cashout</button>
-      </div>
-
-      <div class="player">
-        <h2>🧑‍✈️ Player B</h2>
-        <p>Balance: $<span id="balanceB">1000</span></p>
-        <button onclick="placeBet('B')">Bet</button>
-        <button onclick="cashout('B')">Cashout</button>
-      </div>
-    </div>
-
-    <h3>📈 History — Recent rounds</h3>
-    <table id="history">
-      <thead><tr><th>Round</th><th>Crash Point</th></tr></thead>
-      <tbody></tbody>
-    </table>
-
-    <div class="connection-log" id="log"></div>
+  <div id="flight">
+    <div id="plane">🛩️</div>
   </div>
+
+  <h3>👨‍✈️ Player A</h3>
+  <button onclick="sendBet('A')">Bet</button>
+  <button onclick="sendCashout('A')">Cashout</button>
+
+  <h3>🧑‍✈️ Player B</h3>
+  <button onclick="sendBet('B')">Bet</button>
+  <button onclick="sendCashout('B')">Cashout</button>
+
+  <h3>📈 Connection Log</h3>
+  <div id="log" class="log"></div>
 
   <script>
     const statusEl = document.getElementById("status");
     const multiplierEl = document.getElementById("multiplier");
     const roundEl = document.getElementById("round");
-    const historyBody = document.querySelector("#history tbody");
+    const planeEl = document.getElementById("plane");
     const logEl = document.getElementById("log");
-    const plane = document.getElementById("plane");
-    const planeArea = document.getElementById("plane-area");
 
-    let planeX = 0;
-    let planeY = 0;
-    let inFlight = false;
-
+    // ✅ Connect to your Render backend WebSocket
     const socket = new WebSocket("wss://obedaviator-cdz2.onrender.com");
 
-    function log(msg) {
-      const time = new Date().toLocaleTimeString();
-      logEl.innerHTML = `<div>[${time}] ${msg}</div>` + logEl.innerHTML;
-    }
+    socket.onopen = () => {
+      statusEl.textContent = "✅ Connected to live backend";
+      addLog("Connected to backend");
+    };
 
-    socket.addEventListener("open", () => {
-      statusEl.textContent = "✅ Connected";
-      statusEl.style.color = "#00e676";
-      log("Connected to live backend.");
-    });
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
-    socket.addEventListener("close", () => {
-      statusEl.textContent = "❌ Disconnected";
-      statusEl.style.color = "#ff1744";
-      log("Connection closed.");
-    });
-
-    socket.addEventListener("error", (err) => {
-      statusEl.textContent = "⚠️ Connection error";
-      log("WebSocket error");
-    });
-
-    socket.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "round") {
-          roundEl.textContent = data.round;
-          resetPlane();
-        } else if (data.type === "multiplier") {
-          multiplierEl.textContent = data.value.toFixed(2) + "x";
-          animatePlane(data.value);
-        } else if (data.type === "crash") {
-          inFlight = false;
-          crashPlane(data.point);
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${data.round}</td><td>${data.point.toFixed(2)}x</td>`;
-          historyBody.prepend(tr);
-        } else if (data.type === "log") log(data.message);
-      } catch {
-        log("Invalid message received");
+      if (data.type === "roundStart") {
+        roundEl.textContent = data.round;
+        multiplierEl.textContent = "1.00x";
+        planeEl.style.bottom = "10px";
+        addLog(`🛫 Round ${data.round} started`);
       }
-    });
 
-    function placeBet(player) {
+      if (data.type === "multiplierUpdate") {
+        multiplierEl.textContent = data.multiplier.toFixed(2) + "x";
+        planeEl.style.bottom = (data.multiplier * 25) + "px";
+      }
+
+      if (data.type === "crash") {
+        addLog(`💥 Crashed at ${data.crashPoint}x`);
+        planeEl.style.bottom = "10px";
+      }
+
+      if (data.type === "log") {
+        addLog(data.message);
+      }
+    };
+
+    socket.onerror = () => {
+      statusEl.textContent = "❌ Connection error";
+    };
+
+    function addLog(msg) {
+      logEl.innerHTML += `<div>${msg}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function sendBet(player) {
       socket.send(JSON.stringify({ action: "bet", player }));
-      log(`🟢 Player ${player} placed a bet`);
+      addLog(`🎯 Player ${player} bet`);
     }
 
-    function cashout(player) {
+    function sendCashout(player) {
       socket.send(JSON.stringify({ action: "cashout", player }));
-      log(`💰 Player ${player} cashed out`);
-    }
-
-    // --- Animation logic ---
-    function animatePlane(multiplier) {
-      if (!inFlight) inFlight = true;
-      const maxX = planeArea.offsetWidth - 40;
-      const maxY = planeArea.offsetHeight - 40;
-      planeX = Math.min(maxX, multiplier * 40);
-      planeY = Math.min(maxY, multiplier * 15);
-      plane.style.transform = `translate(${planeX}px, -${planeY}px) rotate(${multiplier * 5}deg)`;
-    }
-
-    function crashPlane(crashPoint) {
-      plane.classList.add("crash");
-      log(`💥 Plane crashed at ${crashPoint.toFixed(2)}x`);
-      setTimeout(() => {
-        resetPlane();
-      }, 2000);
-    }
-
-    function resetPlane() {
-      plane.classList.remove("crash");
-      plane.style.transform = "translate(0px, 0px)";
-      planeX = 0;
-      planeY = 0;
+      addLog(`💰 Player ${player} cashed out`);
     }
   </script>
 </body>
