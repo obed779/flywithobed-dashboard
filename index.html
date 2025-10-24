@@ -95,7 +95,13 @@
       }
     };
 
-    const socket = io("https://obedaviator.onrender.com");
+    const socket = io("https://obedaviator.onrender.com", {
+  transports: ["websocket"],
+  secure: true,
+  reconnection: true,
+  reconnectionAttempts: 10
+});
+
 
     };
   </script>
