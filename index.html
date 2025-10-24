@@ -3,64 +3,133 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>✈️ FlyWithObed Live Aviator Dashboard</title>
+  <title>✈️ FlyWithObed Aviator Live</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     body {
-      background: #0b0f19;
+      background: linear-gradient(180deg, #0b0f19 0%, #121828 100%);
       color: #fff;
-      font-family: 'Poppins', sans-serif;
+      font-family: "Poppins", sans-serif;
       margin: 0;
+      overflow-x: hidden;
       text-align: center;
     }
+
     header {
-      background: #11162a;
-      padding: 1rem;
-      font-size: 1.5rem;
-      font-weight: bold;
+      background: #10172a;
       color: #00ffd5;
+      padding: 1rem;
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: 1px;
     }
+
     #status {
-      margin-top: 1rem;
+      margin: 1rem;
       font-size: 1.2rem;
     }
-    #chart {
-      width: 90%;
-      height: 300px;
-      margin: 2rem auto;
-      border: 2px solid #00ffd5;
-      border-radius: 8px;
-      background: rgba(0, 0, 0, 0.3);
-    }
-    #history {
-      width: 90%;
-      margin: 1rem auto;
-      text-align: left;
-      border-collapse: collapse;
-    }
-    #history th, #history td {
-      border: 1px solid #00ffd5;
-      padding: 8px;
-    }
-    #history th {
-      background: #00ffd5;
-      color: #000;
-    }
+
     #plane {
-      width: 80px;
+      width: 100px;
       position: relative;
       top: 50px;
-      animation: fly 4s infinite linear;
+      animation: fly 4s linear infinite;
     }
+
     @keyframes fly {
       0% { transform: translateX(0); }
       100% { transform: translateX(100vw); }
     }
+
+    #multiplier {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #00ffd5;
+      margin-top: 2rem;
+    }
+
+    #bet-section {
+      background: #11182d;
+      padding: 1rem;
+      margin: 1rem auto;
+      width: 90%;
+      max-width: 400px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 255, 213, 0.3);
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+    }
+
+    input {
+      width: 60%;
+      margin-right: 10px;
+    }
+
+    button {
+      background: #00ffd5;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #00ccaa;
+    }
+
+    #chart, #history {
+      width: 90%;
+      margin: 1rem auto;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    #history th, #history td {
+      border: 1px solid #00ffd5;
+      padding: 8px;
+    }
+
+    #history th {
+      background: #00ffd5;
+      color: #000;
+    }
+
+    #chart {
+      border: 2px solid #00ffd5;
+      height: 250px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: #aaa;
+      margin-top: 1rem;
+    }
+
+    .crashed {
+      color: #ff0044;
+    }
   </style>
 </head>
 <body>
-  <header>✈️ FlyWithObed Live Aviator Dashboard</header>
+  <header>✈️ FlyWithObed Aviator Dashboard</header>
+
   <div id="status">Connecting to Aviator Live...</div>
   <img id="plane" src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Airplane_silhouette.png" alt="Plane" />
+  <div id="multiplier">1.00x</div>
+
+  <div id="bet-section">
+    <h3>💰 Place Your Bet</h3>
+    <input id="betAmount" type="number" min="1" placeholder="Enter Bet Amount" />
+    <button id="placeBet">Place Bet</button>
+    <p id="betInfo"></p>
+  </div>
+
   <div id="chart">📈 Waiting for next round...</div>
 
   <table id="history">
@@ -70,44 +139,81 @@
     <tbody id="historyBody"></tbody>
   </table>
 
-  <!-- ✅ Include socket.io -->
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const statusEl = document.getElementById("status");
+    const multiplierEl = document.getElementById("multiplier");
+    const betInfo = document.getElementById("betInfo");
     const historyBody = document.getElementById("historyBody");
+    const chart = document.getElementById("chart");
 
-    // ✅ Connect to your live Aviator backend
+    let currentMultiplier = 1.0;
+    let betting = false;
+    let playerBet = 0;
+
     const socket = io("https://obedaviator.onrender.com", {
       transports: ["websocket"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000
+      reconnection: true
     });
 
     socket.on("connect", () => {
-      statusEl.textContent = "✅ Connected to Aviator Live — Waiting for next round...";
+      statusEl.textContent = "✅ Connected to Aviator Live";
     });
 
     socket.on("disconnect", () => {
       statusEl.textContent = "❌ Disconnected. Reconnecting...";
     });
 
-    // 🛫 When a plane is flying
+    // Simulate increasing multiplier
+    let flightInterval;
     socket.on("flight_update", (data) => {
-      statusEl.textContent = `🛫 Plane flying... current multiplier: ${data.crashPoint}x`;
+      clearInterval(flightInterval);
+      currentMultiplier = 1.00;
+      chart.textContent = "🛫 Plane is flying...";
+      multiplierEl.classList.remove("crashed");
+
+      flightInterval = setInterval(() => {
+        currentMultiplier += 0.08;
+        multiplierEl.textContent = currentMultiplier.toFixed(2) + "x";
+      }, 100);
     });
 
-    // 💥 When a round crashes
+    // Crash event
     socket.on("new_round", (data) => {
+      clearInterval(flightInterval);
+      multiplierEl.textContent = data.result.toFixed(2) + "x 💥";
+      multiplierEl.classList.add("crashed");
+      chart.textContent = "💥 Plane crashed at " + data.result.toFixed(2) + "x";
+
       const row = document.createElement("tr");
       row.innerHTML = `<td>${data.round_id}</td><td>${data.result}x</td>`;
       historyBody.prepend(row);
-      statusEl.textContent = `💥 Round ${data.round_id} crashed at ${data.result}x`;
+
+      // Bet result
+      if (betting) {
+        if (data.result > 2.0) {
+          betInfo.textContent = `🎉 You won ${playerBet * 2} coins!`;
+          betInfo.style.color = "#00ffd5";
+        } else {
+          betInfo.textContent = `💸 You lost ${playerBet} coins.`;
+          betInfo.style.color = "#ff0044";
+        }
+        betting = false;
+      }
     });
 
-    socket.on("aviator_status", (data) => {
-      statusEl.textContent = `📡 Status: ${data.status}`;
+    // Place bet button
+    document.getElementById("placeBet").addEventListener("click", () => {
+      const amount = parseFloat(document.getElementById("betAmount").value);
+      if (!amount || amount <= 0) {
+        alert("Please enter a valid bet amount.");
+        return;
+      }
+      playerBet = amount;
+      betting = true;
+      betInfo.textContent = `🪙 Bet placed: ${playerBet} coins`;
+      betInfo.style.color = "#00ffd5";
     });
   </script>
 </body>
 </html>
+
