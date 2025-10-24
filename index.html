@@ -3,165 +3,273 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FlyWithObed Aviator Dashboard</title>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <title>✈️ FlyWithObed Aviator Live</title>
   <style>
     body {
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: white;
+      background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
+      color: #fff;
       font-family: "Poppins", sans-serif;
-      text-align: center;
       margin: 0;
-      padding: 0;
+      text-align: center;
+      overflow: hidden;
     }
-
-    h1 {
-      margin-top: 20px;
-      font-size: 28px;
-      color: #00ffcc;
-    }
-
-    #multiplier {
-      font-size: 64px;
-      margin: 40px 0;
-      color: #ffcc00;
-      transition: all 0.2s ease-in-out;
-    }
-
-    .plane {
-      font-size: 70px;
-      animation: fly 2s infinite linear;
-    }
-
-    @keyframes fly {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(100px); }
-    }
-
-    .crash {
-      color: red;
-      animation: shake 0.3s infinite;
-    }
-
-    @keyframes shake {
-      0% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      50% { transform: translateX(5px); }
-      75% { transform: translateX(-5px); }
-      100% { transform: translateX(0); }
-    }
-
-    .balances {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin: 20px 0;
-    }
-
-    .balance-card {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 15px 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(255,255,255,0.2);
-    }
-
-    button {
-      padding: 10px 20px;
-      background-color: #00ffcc;
-      border: none;
-      border-radius: 8px;
-      color: #0f2027;
+    header {
+      background: rgba(0, 255, 213, 0.1);
+      backdrop-filter: blur(8px);
+      padding: 1rem;
+      font-size: 1.8rem;
       font-weight: bold;
+      color: #00ffd5;
+      letter-spacing: 1px;
+    }
+    #status {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+    }
+    #game {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      margin-top: 2rem;
+      overflow: hidden;
+      background: rgba(255,255,255,0.05);
+      border: 2px solid #00ffd5;
+      border-radius: 12px;
+    }
+    #plane {
+      width: 80px;
+      position: absolute;
+      bottom: 40px;
+      left: 10%;
+      transition: transform 0.1s ease-in;
+    }
+    #crashEffect {
+      position: absolute;
+      font-size: 2.5rem;
+      color: #ff3c3c;
+      font-weight: bold;
+      display: none;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: boom 1s ease-in-out;
+    }
+    @keyframes boom {
+      0% { transform: scale(0.5) translate(-50%, -50%); opacity: 0; }
+      50% { transform: scale(1.5) translate(-50%, -50%); opacity: 1; }
+      100% { transform: scale(0.8) translate(-50%, -50%); opacity: 0; }
+    }
+    #cashoutMsg {
+      position: absolute;
+      font-size: 1.8rem;
+      color: #00ffd5;
+      font-weight: bold;
+      display: none;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: cashpop 1s ease-in-out;
+    }
+    @keyframes cashpop {
+      0% { opacity: 0; transform: translate(-50%, -20px); }
+      50% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -40px); }
+    }
+    #multiplier {
+      font-size: 2rem;
+      margin-top: 1rem;
+      color: #00ffd5;
+      font-weight: bold;
+    }
+    .bets {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+    .bet-box {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid #00ffd5;
+      padding: 1rem;
+      border-radius: 12px;
+      width: 45%;
+      min-width: 250px;
+    }
+    .bet-box h3 {
+      color: #00ffd5;
+    }
+    input[type="number"] {
+      width: 60%;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 1rem;
+    }
+    button {
+      background: #00ffd5;
+      border: none;
+      color: #000;
+      font-weight: bold;
+      padding: 10px 18px;
+      border-radius: 8px;
       cursor: pointer;
       margin-top: 10px;
+      transition: background 0.3s;
     }
-
     button:hover {
-      background-color: #02d6b2;
+      background: #00e6c0;
     }
-
-    #status {
-      margin-top: 10px;
-      color: #8ef;
+    #balance {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      color: #ffcc00;
+    }
+    table {
+      margin: 2rem auto;
+      width: 90%;
+      border-collapse: collapse;
+      color: #fff;
+    }
+    th, td {
+      border: 1px solid #00ffd5;
+      padding: 8px;
+    }
+    th {
+      background: #00ffd5;
+      color: #000;
     }
   </style>
 </head>
 <body>
-  <h1>✈️ FlyWithObed Aviator Dashboard</h1>
+  <header>✈️ FlyWithObed Live Aviator Dashboard</header>
+
+  <div id="status">Connecting to Aviator Live...</div>
+  <div id="balance">💰 Balance: <span id="balanceValue">1000.00</span> KES</div>
+
+  <div id="game">
+    <img id="plane" src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Airplane_silhouette.png" alt="Plane">
+    <div id="crashEffect">💥 CRASHED!</div>
+    <div id="cashoutMsg">💸 CASHED OUT!</div>
+  </div>
   <div id="multiplier">1.00x</div>
-  <div class="plane">🛩️</div>
-  <div id="status">Connecting...</div>
 
-  <div class="balances">
-    <div class="balance-card">
-      <h3>Player A</h3>
-      <p id="balA">$5000</p>
-      <button onclick="placeBet('playerA', 100)">🎲 Bet $100</button>
-      <button onclick="cashout('playerA')">💰 Cashout</button>
+  <div class="bets">
+    <div class="bet-box">
+      <h3>Bet A</h3>
+      <input type="number" id="betA" placeholder="Amount" />
+      <button id="placeA">Place Bet</button>
+      <button id="cashoutA" disabled>Cashout</button>
     </div>
-
-    <div class="balance-card">
-      <h3>Player B</h3>
-      <p id="balB">$5000</p>
-      <button onclick="placeBet('playerB', 100)">🎲 Bet $100</button>
-      <button onclick="cashout('playerB')">💰 Cashout</button>
+    <div class="bet-box">
+      <h3>Bet B</h3>
+      <input type="number" id="betB" placeholder="Amount" />
+      <button id="placeB">Place Bet</button>
+      <button id="cashoutB" disabled>Cashout</button>
     </div>
   </div>
 
+  <table id="history">
+    <thead>
+      <tr><th>Round</th><th>Crash Point</th></tr>
+    </thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <script>
-    const socket = io();
-
-    const multiplierDisplay = document.getElementById("multiplier");
-    const plane = document.querySelector(".plane");
-    const statusEl = document.getElementById("status");
-
-    let currentMultiplier = 1.0;
-    let isCrashed = false;
-
-    socket.on("connect", () => {
-      statusEl.textContent = "✅ Connected to Aviator server";
+    const socket = io("https://obedaviator-cdz2.onrender.com", {
+      transports: ["websocket"],
+      secure: true
     });
 
-    socket.on("aviator_status", (data) => {
-      document.getElementById("balA").textContent = `$${data.balances.playerA}`;
-      document.getElementById("balB").textContent = `$${data.balances.playerB}`;
+    const statusEl = document.getElementById("status");
+    const plane = document.getElementById("plane");
+    const crashEffect = document.getElementById("crashEffect");
+    const cashoutMsg = document.getElementById("cashoutMsg");
+    const multiplierEl = document.getElementById("multiplier");
+    const balanceEl = document.getElementById("balanceValue");
+    const historyBody = document.getElementById("historyBody");
+
+    let balance = 1000;
+    let multiplier = 1.00;
+    let active = false;
+    let currentRound = 0;
+    let flyInterval;
+
+    socket.on("connect", () => {
+      statusEl.textContent = "✅ Connected to Aviator Live";
     });
 
     socket.on("flight_update", (data) => {
-      currentMultiplier = data.multiplier;
-      multiplierDisplay.textContent = `${currentMultiplier}x`;
-      if (!isCrashed) {
-        plane.classList.remove("crash");
-      }
+      startFlight(data.crashPoint);
     });
 
-    socket.on("crash", (data) => {
-      multiplierDisplay.textContent = `💥 ${data.crashPoint}x`;
-      plane.classList.add("crash");
-      isCrashed = true;
-      setTimeout(() => {
-        isCrashed = false;
-      }, 3000);
-    });
-
-    socket.on("balance_update", (balances) => {
-      document.getElementById("balA").textContent = `$${balances.playerA}`;
-      document.getElementById("balB").textContent = `$${balances.playerB}`;
-    });
-
-    function placeBet(player, amount) {
-      socket.emit("place_bet", { player, amount });
+    function startFlight(crashPoint) {
+      if (active) return;
+      active = true;
+      multiplier = 1.00;
+      plane.style.left = "10%";
+      crashEffect.style.display = "none";
+      let x = 10;
+      statusEl.textContent = "🛫 Plane taking off...";
+      flyInterval = setInterval(() => {
+        multiplier += 0.05;
+        x += 1.5;
+        plane.style.left = x + "%";
+        multiplierEl.textContent = multiplier.toFixed(2) + "x";
+        if (multiplier >= crashPoint) {
+          clearInterval(flyInterval);
+          crash(crashPoint);
+        }
+      }, 200);
     }
 
-    function cashout(player) {
-      socket.emit("cashout", { player, multiplier: parseFloat(currentMultiplier) });
+    function crash(crashPoint) {
+      statusEl.textContent = `💥 Crashed at ${crashPoint}x`;
+      active = false;
+      crashEffect.style.display = "block";
+      setTimeout(() => (crashEffect.style.display = "none"), 1500);
+      const row = document.createElement("tr");
+      currentRound++;
+      row.innerHTML = `<td>${currentRound}</td><td>${crashPoint}x</td>`;
+      historyBody.prepend(row);
+      resetBets();
     }
 
-    socket.on("bet_failed", (data) => {
-      alert(data.message);
-    });
+    function placeBet(id) {
+      const input = document.getElementById(id);
+      const amount = parseFloat(input.value);
+      if (!amount || amount <= 0 || amount > balance) return alert("Invalid bet");
+      balance -= amount;
+      balanceEl.textContent = balance.toFixed(2);
+      document.getElementById("place" + id.slice(-1).toUpperCase()).disabled = true;
+      document.getElementById("cashout" + id.slice(-1).toUpperCase()).disabled = false;
+    }
+
+    function cashout(id) {
+      const current = multiplier;
+      const gain = parseFloat(document.getElementById(id).value) * current;
+      balance += gain;
+      balanceEl.textContent = balance.toFixed(2);
+      document.getElementById("cashout" + id.slice(-1).toUpperCase()).disabled = true;
+      cashoutMsg.style.display = "block";
+      setTimeout(() => (cashoutMsg.style.display = "none"), 1000);
+      statusEl.textContent = `💸 Cashout successful at ${current.toFixed(2)}x`;
+    }
+
+    function resetBets() {
+      ["A", "B"].forEach(l => {
+        document.getElementById("place" + l).disabled = false;
+        document.getElementById("cashout" + l).disabled = true;
+        document.getElementById("bet" + l).value = "";
+      });
+    }
+
+    document.getElementById("placeA").onclick = () => placeBet("betA");
+    document.getElementById("placeB").onclick = () => placeBet("betB");
+    document.getElementById("cashoutA").onclick = () => cashout("betA");
+    document.getElementById("cashoutB").onclick = () => cashout("betB");
   </script>
 </body>
 </html>
-
-
