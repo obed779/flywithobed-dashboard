@@ -16,60 +16,51 @@ const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
 let round = 1;
-let multiplier = 1.0;
 let inFlight = false;
+let multiplier = 1.0;
 
 function broadcast(data) {
-  const msg = JSON.stringify(data);
-  wss.clients.forEach(c => {
-    if (c.readyState === 1) c.send(msg);
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify(data));
+    }
   });
 }
 
 function startRound() {
   inFlight = true;
   multiplier = 1.0;
-  broadcast({ type: "round", round });
-  broadcast({ type: "log", message: `🛫 Round ${round} started` });
+  const crashPoint = (Math.random() * 5 + 1.1).toFixed(2);
 
-  const flight = setInterval(() => {
-    if (!inFlight) return clearInterval(flight);
+  broadcast({ type: "roundStart", round, crashPoint });
+  console.log(`🛫 Round ${round} started (crash at ${crashPoint}x)`);
 
-    multiplier += 0.05;
-    broadcast({ type: "multiplier", value: multiplier });
+  const timer = setInterval(() => {
+    if (!inFlight) {
+      clearInterval(timer);
+      return;
+    }
 
-    const crashAt = Math.random() * 5 + 1.1; // random crash 1.1–6.1x
-    if (multiplier >= crashAt) {
+    multiplier = (multiplier + 0.05).toFixed(2);
+    broadcast({ type: "multiplierUpdate", multiplier });
+
+    if (parseFloat(multiplier) >= crashPoint) {
       inFlight = false;
-      broadcast({ type: "crash", round, point: crashAt });
-      broadcast({ type: "log", message: `💥 Crashed at ${crashAt.toFixed(2)}x` });
+      clearInterval(timer);
+      broadcast({ type: "crash", round, crashPoint });
+      console.log(`💥 Crashed at ${crashPoint}x`);
       round++;
-      setTimeout(startRound, 3000);
-      clearInterval(flight);
+      setTimeout(startRound, 3000); // start next round after 3 seconds
     }
   }, 200);
 }
 
-wss.on("connection", ws => {
-  console.log("🟢 Client connected");
-  ws.send(JSON.stringify({ type: "log", message: "Connected to FlyWithObed backend" }));
-
-  ws.on("message", msg => {
-    try {
-      const data = JSON.parse(msg);
-      if (data.action === "bet") {
-        broadcast({ type: "log", message: `🎯 Player ${data.player} placed a bet` });
-      } else if (data.action === "cashout") {
-        broadcast({ type: "log", message: `💰 Player ${data.player} cashed out` });
-      }
-    } catch (e) {
-      console.log("Invalid message", e);
-    }
-  });
+wss.on("connection", (ws) => {
+  console.log("🟢 Dashboard connected");
+  ws.send(JSON.stringify({ type: "connected" }));
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  startRound(); // start the flight loop
+server.listen(3000, () => {
+  console.log("✅ Server running on port 3000");
+  startRound();
 });
