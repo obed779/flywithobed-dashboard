@@ -4,132 +4,183 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>✈️ FlyWithObed Live Aviator Dashboard</title>
+  <title>FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
-      font-family: "Segoe UI", sans-serif;
-      background-color: #0b0d10;
-      color: #f1f1f1;
-      text-align: center;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(180deg, #0d1b2a, #1b263b);
+      color: #fff;
       margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    h1 {
+      margin-top: 20px;
+      font-size: 2em;
+    }
+    #status {
+      font-size: 1.2em;
+      margin: 10px 0;
+    }
+    .plane {
+      font-size: 80px;
+      transition: transform 0.3s ease-in-out;
+    }
+    .multiplier {
+      font-size: 2em;
+      margin-top: 10px;
+      color: #00ff88;
+    }
+    .players {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin-top: 30px;
+    }
+    .player {
+      background: rgba(255, 255, 255, 0.1);
       padding: 20px;
+      border-radius: 10px;
+      width: 200px;
     }
-    h1 { color: #00b3ff; }
-    #flight {
-      width: 100%;
-      height: 250px;
-      background: linear-gradient(180deg, #111, #0b0d10);
-      border: 1px solid #333;
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-      margin-bottom: 20px;
-    }
-    #plane {
-      position: absolute;
-      left: 20px;
-      bottom: 10px;
-      font-size: 2rem;
-      transition: bottom 0.2s linear;
+    input {
+      width: 80%;
+      padding: 5px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 5px;
+      text-align: center;
     }
     button {
-      background: #007bff;
+      padding: 8px 20px;
+      margin-top: 5px;
       border: none;
-      padding: 8px 16px;
-      margin: 5px;
-      border-radius: 8px;
+      border-radius: 5px;
+      background-color: #00b4d8;
       color: white;
       cursor: pointer;
     }
-    .log {
-      background: #111;
+    button:hover {
+      background-color: #0096c7;
+    }
+    table {
+      width: 60%;
+      margin: 30px auto;
+      border-collapse: collapse;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
       padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #333;
-      text-align: left;
-      max-height: 150px;
-      overflow-y: auto;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    th {
+      background-color: rgba(255,255,255,0.2);
+    }
+    tr:last-child td {
+      border-bottom: none;
     }
   </style>
 </head>
 <body>
   <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <p>Status: <span id="status">connecting...</span></p>
-  <p>Multiplier: <span id="multiplier">1.00x</span></p>
-  <p>Round: <span id="round">—</span></p>
+  <div id="status">Connecting...</div>
+  <div class="plane" id="plane">🛫</div>
+  <div class="multiplier" id="multiplier">1.00x</div>
 
-  <div id="flight">
-    <div id="plane">🛩️</div>
+  <div class="players">
+    <div class="player">
+      <h3>👨‍✈️ Player A</h3>
+      <p>Balance: $1000</p>
+      <input type="text" placeholder="Enter bet" id="betA" />
+      <div>
+        <button onclick="placeBet('A')">Bet</button>
+        <button onclick="cashOut('A')">Cashout</button>
+      </div>
+    </div>
+    <div class="player">
+      <h3>🧑‍✈️ Player B</h3>
+      <p>Balance: $1000</p>
+      <input type="text" placeholder="Enter bet" id="betB" />
+      <div>
+        <button onclick="placeBet('B')">Bet</button>
+        <button onclick="cashOut('B')">Cashout</button>
+      </div>
+    </div>
   </div>
 
-  <h3>👨‍✈️ Player A</h3>
-  <button onclick="sendBet('A')">Bet</button>
-  <button onclick="sendCashout('A')">Cashout</button>
-
-  <h3>🧑‍✈️ Player B</h3>
-  <button onclick="sendBet('B')">Bet</button>
-  <button onclick="sendCashout('B')">Cashout</button>
-
-  <h3>📈 Connection Log</h3>
-  <div id="log" class="log"></div>
+  <h2>📈 History</h2>
+  <table>
+    <thead>
+      <tr><th>Round</th><th>Crash Point</th></tr>
+    </thead>
+    <tbody id="history"></tbody>
+  </table>
 
   <script>
     const statusEl = document.getElementById("status");
     const multiplierEl = document.getElementById("multiplier");
-    const roundEl = document.getElementById("round");
     const planeEl = document.getElementById("plane");
-    const logEl = document.getElementById("log");
+    const historyEl = document.getElementById("history");
 
-    // ✅ Connect to your Render backend WebSocket
-    const socket = new WebSocket("wss://obedaviator-cdz2.onrender.com");
+    let ws;
+    let currentMultiplier = 1.0;
 
-    socket.onopen = () => {
-      statusEl.textContent = "✅ Connected to live backend";
-      addLog("Connected to backend");
-    };
+    function connect() {
+      ws = new WebSocket("wss://obedaviator-cdz2.onrender.com");
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      ws.onopen = () => {
+        statusEl.textContent = "🟢 Connected to Live Server";
+      };
 
-      if (data.type === "roundStart") {
-        roundEl.textContent = data.round;
-        multiplierEl.textContent = "1.00x";
-        planeEl.style.bottom = "10px";
-        addLog(`🛫 Round ${data.round} started`);
-      }
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "multiplier") {
+            currentMultiplier = data.value;
+            multiplierEl.textContent = data.value.toFixed(2) + "x";
+            planeEl.style.transform = `translateX(${data.value * 20}px)`;
+          } else if (data.type === "crash") {
+            multiplierEl.textContent = "💥 Crashed at " + data.value.toFixed(2) + "x";
+            planeEl.textContent = "💥";
+            addHistory(data.round, data.value);
+            setTimeout(() => {
+              planeEl.textContent = "🛫";
+              planeEl.style.transform = "translateX(0)";
+            }, 2000);
+          }
+        } catch (err) {
+          console.error("Bad data:", event.data);
+        }
+      };
 
-      if (data.type === "multiplierUpdate") {
-        multiplierEl.textContent = data.multiplier.toFixed(2) + "x";
-        planeEl.style.bottom = (data.multiplier * 25) + "px";
-      }
-
-      if (data.type === "crash") {
-        addLog(`💥 Crashed at ${data.crashPoint}x`);
-        planeEl.style.bottom = "10px";
-      }
-
-      if (data.type === "log") {
-        addLog(data.message);
-      }
-    };
-
-    socket.onerror = () => {
-      statusEl.textContent = "❌ Connection error";
-    };
-
-    function addLog(msg) {
-      logEl.innerHTML += `<div>${msg}</div>`;
-      logEl.scrollTop = logEl.scrollHeight;
+      ws.onclose = () => {
+        statusEl.textContent = "🔴 Disconnected — reconnecting...";
+        setTimeout(connect, 3000);
+      };
     }
 
-    function sendBet(player) {
-      socket.send(JSON.stringify({ action: "bet", player }));
-      addLog(`🎯 Player ${player} bet`);
+    connect();
+
+    function addHistory(round, crashPoint) {
+      const row = document.createElement("tr");
+      const roundCell = document.createElement("td");
+      const crashCell = document.createElement("td");
+      roundCell.textContent = round;
+      crashCell.textContent = crashPoint.toFixed(2) + "x";
+      row.appendChild(roundCell);
+      row.appendChild(crashCell);
+      historyEl.prepend(row);
+      if (historyEl.children.length > 10) historyEl.removeChild(historyEl.lastChild);
     }
 
-    function sendCashout(player) {
-      socket.send(JSON.stringify({ action: "cashout", player }));
-      addLog(`💰 Player ${player} cashed out`);
+    function placeBet(player) {
+      alert(`Player ${player} placed bet: $${document.getElementById("bet" + player).value || 0}`);
+    }
+
+    function cashOut(player) {
+      alert(`Player ${player} cashed out at ${currentMultiplier.toFixed(2)}x`);
     }
   </script>
 </body>
