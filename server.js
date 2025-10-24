@@ -1,3 +1,4 @@
+
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
@@ -17,32 +18,32 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// ✅ Serve static dashboard files
-app.use(express.static(path.join(__dirname, "public")));
+// ✅ Serve the index.html file
+app.use(express.static(__dirname));
 
 app.get("/", (req, res) => {
-  res.send("✅ FlyWithObed Aviator Server is live!");
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.get("/dashboard", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
-});
-
-// ✈️ Simple Aviator logic
+// ======================
+// ✈️ Aviator Game Engine
+// ======================
 let round = 0;
 let isFlying = false;
+let balances = { playerA: 5000, playerB: 5000 };
 
 function startRound() {
   if (isFlying) return;
   isFlying = true;
   round++;
+
   let multiplier = 1.0;
   const crashPoint = (Math.random() * 6 + 1).toFixed(2);
   console.log(`✈️ Round ${round} started — crash at ${crashPoint}x`);
 
   const flightInterval = setInterval(() => {
     multiplier += 0.05;
-    io.emit("flight_update", { round, crashPoint, multiplier: multiplier.toFixed(2) });
+    io.emit("flight_update", { round, multiplier: multiplier.toFixed(2) });
 
     if (multiplier >= crashPoint) {
       clearInterval(flightInterval);
@@ -56,7 +57,24 @@ function startRound() {
 
 io.on("connection", (socket) => {
   console.log("✅ Dashboard connected");
-  socket.emit("aviator_status", { status: "connected" });
+  socket.emit("aviator_status", { status: "connected", balances });
+
+  socket.on("place_bet", ({ player, amount }) => {
+    if (balances[player] >= amount) {
+      balances[player] -= amount;
+      io.emit("balance_update", balances);
+      console.log(`🎲 ${player} placed bet of ${amount}`);
+    } else {
+      socket.emit("bet_failed", { message: "❌ Insufficient balance" });
+    }
+  });
+
+  socket.on("cashout", ({ player, multiplier }) => {
+    const winAmount = Math.round(100 * multiplier);
+    balances[player] += winAmount;
+    io.emit("balance_update", balances);
+    console.log(`💰 ${player} cashed out ${winAmount} at ${multiplier}x`);
+  });
 
   socket.on("disconnect", () => {
     console.log("❌ Dashboard disconnected");
@@ -68,3 +86,4 @@ server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   setTimeout(startRound, 2000);
 });
+
