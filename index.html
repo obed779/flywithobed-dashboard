@@ -46,7 +46,8 @@
       position: absolute;
       bottom: 20px;
       left: 5%;
-      transition: transform 0.2s ease;
+      transition: transform 0.2s ease, left 0.2s ease, bottom 0.2s ease;
+      transform-origin: center;
     }
 
     #multiplier {
@@ -114,6 +115,13 @@
       background: #00ffd5;
       color: #000;
     }
+
+    @keyframes crashShake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(3px, 3px) rotate(2deg); }
+      50% { transform: translate(-3px, -3px) rotate(-2deg); }
+      75% { transform: translate(2px, -2px) rotate(1deg); }
+    }
   </style>
 </head>
 <body>
@@ -159,34 +167,51 @@
     const historyBody = document.getElementById("historyBody");
 
     let multiplier = 1.00;
-    let flightAnim;
     let x = 5;
+    let y = 20;
+    let flying = false;
 
     socket.on("connect", () => statusEl.textContent = "✅ Connected to Aviator Live");
 
     socket.on("roundStart", data => {
       multiplier = 1.0;
       x = 5;
+      y = 20;
       plane.style.left = "5%";
+      plane.style.bottom = "20px";
+      plane.style.transform = "rotate(-10deg)";
       multiplierEl.textContent = "1.00x";
       statusEl.textContent = `🛫 Round ${data.round} started...`;
+      flying = true;
     });
 
     socket.on("flightUpdate", data => {
+      if (!flying) return;
       multiplierEl.textContent = data.multiplier + "x";
       x += 0.8;
+      y += 0.3;
       plane.style.left = Math.min(x, 85) + "%";
+      plane.style.bottom = Math.min(y, 150) + "px";
+      plane.style.transform = "rotate(-10deg)";
     });
 
     socket.on("roundCrash", data => {
+      flying = false;
       statusEl.textContent = `💥 Crashed at ${data.crashPoint}x`;
       const row = document.createElement("tr");
       row.innerHTML = `<td>${data.round}</td><td>${data.crashPoint}x</td>`;
       historyBody.prepend(row);
-      plane.style.left = "5%";
+      plane.style.animation = "crashShake 0.6s";
+      plane.style.transform = "rotate(90deg)";
+      setTimeout(() => {
+        plane.style.animation = "none";
+        plane.style.left = "5%";
+        plane.style.bottom = "20px";
+        plane.style.transform = "rotate(0deg)";
+      }, 1000);
     });
 
-    // Betting
+    // Betting system
     const balances = { A: 1000, B: 1000 };
 
     function placeBet(player) {
@@ -212,3 +237,4 @@
   </script>
 </body>
 </html>
+
