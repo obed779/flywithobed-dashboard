@@ -1,4 +1,4 @@
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
   const statusEl = document.getElementById("status");
   const historyBody = document.getElementById("historyBody");
@@ -7,30 +7,32 @@
   const socket = io("https://obedaviator.onrender.com", {
     transports: ["websocket"],
     reconnection: true,
-    reconnectionAttempts: 5,
   });
 
-  // ✅ On connection
   socket.on("connect", () => {
     statusEl.textContent = "✅ Connected to Aviator Live — Waiting for next round...";
   });
 
-  // ✅ Listen for new flight updates from server.js
-  socket.on("flight_update", (data) => {
-    const { crashPoint } = data;
-    const round = new Date().toLocaleTimeString();
-
-    const row = document.createElement("tr");
-    row.innerHTML = `<td>${round}</td><td>${crashPoint}x</td>`;
-    historyBody.prepend(row);
-
-    statusEl.textContent = `✈️ Flight crashed at ${crashPoint}x`;
+  socket.on("disconnect", () => {
+    statusEl.textContent = "❌ Disconnected. Reconnecting...";
   });
 
-  // ✅ Connection errors
-  socket.on("connect_error", (err) => {
-    statusEl.textContent = "❌ Disconnected. Reconnecting...";
-    console.error("Connection error:", err);
+  // ✅ Receive live flight updates
+  socket.on("flight_update", (data) => {
+    statusEl.textContent = `🛫 Plane flying... current multiplier: ${data.crashPoint}x`;
+  });
+
+  // ✅ Receive new round updates
+  socket.on("new_round", (data) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${data.round_id}</td><td>${data.result}x</td>`;
+    historyBody.prepend(row);
+    statusEl.textContent = `💥 Round ${data.round_id} crashed at ${data.result}x`;
+  });
+
+  // ✅ Receive status updates
+  socket.on("aviator_status", (data) => {
+    statusEl.textContent = `📡 Status: ${data.status}`;
   });
 </script>
 
