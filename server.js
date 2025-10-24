@@ -1,89 +1,70 @@
 
+// server.js
 import express from "express";
 import http from "http";
-import { Server } from "socket.io";
+import { WebSocketServer } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
-import cors from "cors";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
-});
+const wss = new WebSocketServer({ server });
 
-app.use(cors());
-app.use(express.json());
-
-// ✅ Serve the index.html file
-app.use(express.static(__dirname));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// ======================
-// ✈️ Aviator Game Engine
-// ======================
 let round = 0;
-let isFlying = false;
-let balances = { playerA: 5000, playerB: 5000 };
+let clients = [];
 
-function startRound() {
-  if (isFlying) return;
-  isFlying = true;
-  round++;
+app.use(express.static(__dirname)); // serves index.html + assets
 
-  let multiplier = 1.0;
-  const crashPoint = (Math.random() * 6 + 1).toFixed(2);
-  console.log(`✈️ Round ${round} started — crash at ${crashPoint}x`);
+// ✅ WebSocket connection
+wss.on("connection", (ws) => {
+  console.log("✅ Client connected to Aviator Live");
+  clients.push(ws);
 
-  const flightInterval = setInterval(() => {
-    multiplier += 0.05;
-    io.emit("flight_update", { round, multiplier: multiplier.toFixed(2) });
+  ws.on("close", () => {
+    clients = clients.filter((c) => c !== ws);
+    console.log("❌ Client disconnected");
+  });
+});
 
-    if (multiplier >= crashPoint) {
-      clearInterval(flightInterval);
-      io.emit("crash", { round, crashPoint });
-      console.log(`💥 Round ${round} crashed at ${crashPoint}x`);
-      isFlying = false;
-      setTimeout(startRound, 5000);
+// ✅ Helper to broadcast data to all connected clients
+function broadcast(data) {
+  clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify(data));
     }
-  }, 150);
+  });
 }
 
-io.on("connection", (socket) => {
-  console.log("✅ Dashboard connected");
-  socket.emit("aviator_status", { status: "connected", balances });
+// ✅ Start Aviator rounds
+function startRound() {
+  round++;
+  const crashPoint = (Math.random() * 6 + 1).toFixed(2); // 1.00–7.00x
+  console.log(`✈️ Round ${round} started — crash at ${crashPoint}x`);
+  let multiplier = 1.0;
 
-  socket.on("place_bet", ({ player, amount }) => {
-    if (balances[player] >= amount) {
-      balances[player] -= amount;
-      io.emit("balance_update", balances);
-      console.log(`🎲 ${player} placed bet of ${amount}`);
-    } else {
-      socket.emit("bet_failed", { message: "❌ Insufficient balance" });
+  const interval = setInterval(() => {
+    multiplier += 0.05;
+    broadcast({ type: "flight", multiplier: multiplier.toFixed(2) });
+
+    if (multiplier >= crashPoint) {
+      clearInterval(interval);
+      broadcast({ type: "crash", round, point: parseFloat(crashPoint) });
+      console.log(`💥 Round ${round} crashed at ${crashPoint}x`);
+      setTimeout(startRound, 3000); // start next round after 3 seconds
     }
-  });
+  }, 150); // update every 150ms for smooth animation
+}
 
-  socket.on("cashout", ({ player, multiplier }) => {
-    const winAmount = Math.round(100 * multiplier);
-    balances[player] += winAmount;
-    io.emit("balance_update", balances);
-    console.log(`💰 ${player} cashed out ${winAmount} at ${multiplier}x`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("❌ Dashboard disconnected");
-  });
+// ✅ Serve the dashboard page
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  setTimeout(startRound, 2000);
+  startRound();
 });
-
