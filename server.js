@@ -1,8 +1,8 @@
 
-// server.js
 import express from "express";
 import http from "http";
-import { WebSocketServer } from "ws";
+import { Server } from "socket.io";
+import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -11,60 +11,90 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+const io = new Server(server, { cors: { origin: "*" } });
 
+app.use(cors());
+app.use(express.static(__dirname));
+
+// ===============================
+// ✈️ FlyWithObed Aviator Engine
+// ===============================
 let round = 0;
-let clients = [];
+let isFlying = false;
+let balances = { A: 1000, B: 1000 };
+let activeBets = {};
+let crashPoint = 0;
 
-app.use(express.static(__dirname)); // serves index.html + assets
-
-// ✅ WebSocket connection
-wss.on("connection", (ws) => {
-  console.log("✅ Client connected to Aviator Live");
-  clients.push(ws);
-
-  ws.on("close", () => {
-    clients = clients.filter((c) => c !== ws);
-    console.log("❌ Client disconnected");
-  });
-});
-
-// ✅ Helper to broadcast data to all connected clients
-function broadcast(data) {
-  clients.forEach((client) => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(data));
-    }
-  });
-}
-
-// ✅ Start Aviator rounds
+// Function to start a new round
 function startRound() {
+  if (isFlying) return;
+  isFlying = true;
   round++;
-  const crashPoint = (Math.random() * 6 + 1).toFixed(2); // 1.00–7.00x
-  console.log(`✈️ Round ${round} started — crash at ${crashPoint}x`);
-  let multiplier = 1.0;
+  activeBets = {};
 
-  const interval = setInterval(() => {
+  crashPoint = (Math.random() * 6 + 1).toFixed(2);
+  console.log(`✈️ Round ${round} started — will crash at ${crashPoint}x`);
+
+  io.emit("roundStart", { round, multiplier: 1.0 });
+
+  let multiplier = 1.0;
+  const flight = setInterval(() => {
     multiplier += 0.05;
-    broadcast({ type: "flight", multiplier: multiplier.toFixed(2) });
+    io.emit("flightUpdate", { round, multiplier: multiplier.toFixed(2) });
 
     if (multiplier >= crashPoint) {
-      clearInterval(interval);
-      broadcast({ type: "crash", round, point: parseFloat(crashPoint) });
-      console.log(`💥 Round ${round} crashed at ${crashPoint}x`);
-      setTimeout(startRound, 3000); // start next round after 3 seconds
+      clearInterval(flight);
+      io.emit("roundCrash", { round, crashPoint });
+      console.log(`💥 Crashed at ${crashPoint}x`);
+      isFlying = false;
+      setTimeout(startRound, 5000);
     }
-  }, 150); // update every 150ms for smooth animation
+  }, 200);
 }
 
-// ✅ Serve the dashboard page
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+// ===============================
+// 🎮 Socket Logic
+// ===============================
+io.on("connection", (socket) => {
+  console.log("✅ Client connected");
+  socket.emit("aviator_status", { status: "connected", balances });
+
+  // Bet placing
+  socket.on("placeBet", ({ player, bet }) => {
+    if (!player || !bet) return;
+    if (balances[player] < bet) {
+      socket.emit("errorMsg", "❌ Not enough balance!");
+      return;
+    }
+    balances[player] -= bet;
+    activeBets[player] = { bet, cashedOut: false };
+    io.emit("balanceUpdate", { player, balance: balances[player] });
+    console.log(`🎲 Player ${player} bet $${bet}`);
+  });
+
+  // Cashout action
+  socket.on("cashOut", ({ player }) => {
+    const currentMultiplier = Math.min(crashPoint - 0.1, 5.0);
+    if (activeBets[player] && !activeBets[player].cashedOut) {
+      const { bet } = activeBets[player];
+      const winAmount = Math.round(bet * currentMultiplier);
+      balances[player] += winAmount;
+      activeBets[player].cashedOut = true;
+      io.emit("balanceUpdate", { player, balance: balances[player] });
+      console.log(`💰 Player ${player} cashed out $${winAmount} at ${currentMultiplier}x`);
+    }
+  });
+
+  socket.on("disconnect", () => console.log("❌ Client disconnected"));
 });
 
+// ===============================
+// 🚀 Start Server
+// ===============================
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  startRound();
+  setTimeout(startRound, 2000);
 });
+
+
