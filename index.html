@@ -1,167 +1,170 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>✈️ FlyWithObed — Live Aviator</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <style>
-    :root{--bg:#071022;--panel:#0f1724;--accent:#00d1ff;--muted:rgba(255,255,255,0.08);--text:#e6eef8}
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,var(--bg),#020417);color:var(--text)}
-    .wrap{max-width:1100px;margin:18px auto;padding:16px}
-    header{display:flex;align-items:center;gap:12px;justify-content:space-between}
-    h1{margin:0;color:var(--accent);font-size:1.25rem}
-    .hud{display:flex;gap:12px;margin-top:12px}
-    .chip{background:var(--panel);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
-    .chip .label{font-size:12px;opacity:0.8}
-    .layout{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:14px}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
-    #aviatorCanvas{width:100%;height:300px;border-radius:10px;background:linear-gradient(180deg,#04101a,#031019)}
-    .players{display:flex;gap:12px;justify-content:space-between;margin-top:12px}
-    .player{background:var(--panel);padding:8px;border-radius:8px;width:48%}
-    .player h3{margin:0 0 6px 0;color:var(--accent)}
-    input[type="number"]{width:100%;padding:8px;border-radius:6px;border:none}
-    button{background:var(--accent);border:none;padding:8px 10px;border-radius:8px;color:#001;padding-left:12px;padding-right:12px;cursor:pointer}
-    .history table{width:100%;border-collapse:collapse;color:#cfe8f7}
-    th,td{padding:6px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03)}
-    .status-line{margin-top:8px;font-size:13px;opacity:0.9}
-    .small{font-size:13px;color:rgba(255,255,255,0.7)}
-    .muted{color:rgba(255,255,255,0.6)}
-    .log{max-height:130px;overflow:auto;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:12px}
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #0e0e0e;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(90deg, #d81b60, #8e24aa);
+      font-size: 1.3em;
+      font-weight: bold;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    .status {
+      margin-bottom: 20px;
+      font-size: 1.2em;
+    }
+    .multiplier {
+      font-size: 2.5em;
+      color: #00e676;
+      margin-bottom: 15px;
+    }
+    .players {
+      display: flex;
+      gap: 60px;
+      margin-top: 20px;
+    }
+    .player {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 10px;
+      width: 220px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+    .player h2 {
+      margin-top: 0;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 14px;
+      background: #6200ea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3700b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+      color: #ddd;
+    }
+    th, td {
+      border-bottom: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    .connection-log {
+      margin-top: 20px;
+      font-size: 0.9em;
+      background: #111;
+      padding: 10px;
+      width: 80%;
+      max-width: 600px;
+      border-radius: 8px;
+      overflow-y: auto;
+      max-height: 200px;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-      <div class="small muted">Production — connected to your live backend</div>
-    </header>
+  <header>✈️ FlyWithObed Live Aviator Dashboard<br><small>Production — connected to your live backend</small></header>
 
-    <div class="hud">
-      <div class="chip">Multiplier: <strong id="multDisp">1.00x</strong></div>
-      <div class="chip">Round: <strong id="roundDisp">—</strong></div>
-      <div class="chip">Status: <strong id="status">connecting...</strong></div>
-    </div>
+  <div class="container">
+    <div class="status">Status: <span id="status">connecting...</span></div>
+    <div class="multiplier">Multiplier: <span id="multiplier">1.00x</span></div>
+    <div>Round: <span id="round">—</span></div>
 
-    <div class="layout">
-      <div class="card">
-        <canvas id="aviatorCanvas" width="1000" height="600"></canvas>
-
-        <div class="players">
-          <div class="player">
-            <h3>👨‍✈️ Player A</h3>
-            <div>Balance: <span id="balA">$1000</span></div>
-            <input id="betA" type="number" placeholder="Enter bet (KES/$)" />
-            <div style="margin-top:8px;display:flex;gap:8px">
-              <button id="betBtnA">Bet</button>
-              <button id="cashBtnA">Cashout</button>
-            </div>
-          </div>
-
-          <div class="player">
-            <h3>🧑‍✈️ Player B</h3>
-            <div>Balance: <span id="balB">$1000</span></div>
-            <input id="betB" type="number" placeholder="Enter bet (KES/$)" />
-            <div style="margin-top:8px;display:flex;gap:8px">
-              <button id="betBtnB">Bet</button>
-              <button id="cashBtnB">Cashout</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="status-line small muted">Note: bets and cashouts are sent to the server via WebSocket messages.</div>
+    <div class="players">
+      <div class="player">
+        <h2>👨‍✈️ Player A</h2>
+        <p>Balance: $<span id="balanceA">1000</span></p>
+        <button onclick="placeBet('A')">Bet</button>
+        <button onclick="cashout('A')">Cashout</button>
       </div>
 
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <strong>📈 History</strong>
-          <span class="small muted">Recent rounds</span>
-        </div>
-
-        <div class="history" style="margin-top:8px">
-          <table id="historyTable">
-            <thead><tr><th>Round</th><th>Crash Point</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div style="margin-top:12px"><strong>Connection log</strong></div>
-        <div id="log" class="log"></div>
+      <div class="player">
+        <h2>🧑‍✈️ Player B</h2>
+        <p>Balance: $<span id="balanceB">1000</span></p>
+        <button onclick="placeBet('B')">Bet</button>
+        <button onclick="cashout('B')">Cashout</button>
       </div>
     </div>
+
+    <h3>📈 History — Recent rounds</h3>
+    <table id="history">
+      <thead>
+        <tr><th>Round</th><th>Crash Point</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="connection-log" id="log"></div>
   </div>
 
   <script>
-  (function(){
-    // Canvas setup
-    const canvas = document.getElementById('aviatorCanvas');
-    const ctx = canvas.getContext('2d');
-    const DPR = window.devicePixelRatio || 1;
-    canvas.width = canvas.clientWidth * DPR;
-    canvas.height = canvas.clientHeight * DPR;
-    ctx.scale(DPR, DPR);
+    const statusEl = document.getElementById("status");
+    const multiplierEl = document.getElementById("multiplier");
+    const roundEl = document.getElementById("round");
+    const historyBody = document.querySelector("#history tbody");
+    const logEl = document.getElementById("log");
 
-    // State & UI refs
-    const UI = {
-      mult: document.getElementById('multDisp'),
-      round: document.getElementById('roundDisp'),
-      status: document.getElementById('status'),
-      historyBody: document.querySelector('#historyTable tbody'),
-      log: document.getElementById('log'),
-      betA: document.getElementById('betA'),
-      betB: document.getElementById('betB'),
-      betBtnA: document.getElementById('betBtnA'),
-      betBtnB: document.getElementById('betBtnB'),
-      cashBtnA: document.getElementById('cashBtnA'),
-      cashBtnB: document.getElementById('cashBtnB'),
-      balA: document.getElementById('balA'),
-      balB: document.getElementById('balB')
-    };
+    const socket = new WebSocket("wss://obedaviator-cdz2.onrender.com");
 
-    const state = { running:false, round:null, target:1.0, current:1.0 };
-
-    // Drawing functions (plane + simple grid)
-    function clear(){ ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); }
-    function drawGrid(){
-      const H = canvas.clientHeight;
-      for(let i=0;i<6;i++){
-        const y = H - (i*40) - 30;
-        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.clientWidth,y);
-        ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1; ctx.stroke();
-      }
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML = `<div>[${time}] ${msg}</div>` + logEl.innerHTML;
     }
-    function drawPlane(x,y,size,angle){
-      ctx.save(); ctx.translate(x,y); ctx.rotate(angle); ctx.scale(size/100,size/100);
-      ctx.beginPath(); ctx.moveTo(-60,0); ctx.quadraticCurveTo(-30,-18,0,-6);
-      ctx.quadraticCurveTo(20,-2,60,-8); ctx.lineTo(56,-4); ctx.lineTo(40,-2);
-      ctx.lineTo(0,8); ctx.lineTo(-40,12); ctx.closePath();
-      ctx.fillStyle = '#00d1ff'; ctx.fill(); ctx.restore();
-    }
-    function multToX(mult){
-      const minX = 40, maxX = canvas.clientWidth - 140;
-      const baseMax = Math.log(Math.max(state.target, 3) + 1);
-      const v = Math.log(Math.max(mult, 1));
-      const t = Math.min(1, v / baseMax);
-      return minX + (maxX - minX) * t;
-    }
-    function render(){
-      clear(); drawGrid();
-      const H = canvas.clientHeight;
-      const x = multToX(state.current);
-      const y = H/2 - 20 - Math.min(90, Math.log(state.current + 1) * 45);
-      // shadow
-      ctx.save();
-      ctx.beginPath(); ctx.ellipse(x, H - 30, 42, 8, 0, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill(); ctx.restore();
-      drawPlane(x, y, 48, -0.12);
-      // HUD overlay can be added if needed
-      requestAnimationFrame(render);
-    }
-    requestAnimationFrame(render);
 
-    // Logging helper
-    function log(msg){ const el = document.createElement('div'); el.textContent = `${new Date().toLocaleTimeString()} - ${msg}`; UI.log.prepend(el); }
+    socket.addEventListener("open", () => {
+      statusEl.textContent = "✅ Connected";
+      statusEl.style.color = "#00e676";
+      log("Connected to live backend.");
+    });
 
-    // Robust WebSocket connection with auto-retry
-    const WS_BASE = 'wss://obedaviator-cdz2.onrender.com_
+    socket.addEventListener("close", () => {
+      statusEl.textContent = "❌ Disconnected";
+      statusEl.style.color = "#ff1744";
+      log("Connection closed.");
+    });
+
+    socket.addEventListener("error", (err) => {
+      statusEl.textContent = "⚠️ Connection error";
+      log("WebSocket error: " + err);
+    });
+
+    socket.addEventListener("message", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "multiplier") {
+          multiplierEl.textContent = data.value.toFixed(2) + "x";
+        } else if (data.type === "round") {
+          roundEl.textContent = data.round;
+        } else if (data.type === "crash") {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${data.round}</td><td>${data.point.toFixed(2)}x</td>`;
+          historyBody.prepend(tr);
+        } else if (data.type === "log") {
+          log(data.message);
+        }
+      } catch
