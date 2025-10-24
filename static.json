@@ -1,7 +1,6 @@
 {
-  "root": ".",
-  "cleanUrls": false,
+  "root": "public",
   "routes": {
-    "/": "dashboard.html"
+    "/dashboard": "/dashboard.html"
   }
 }
