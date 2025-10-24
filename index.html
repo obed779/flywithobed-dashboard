@@ -1,109 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FlyWithObed Dashboard</title>
-  <style>
-    body {
-      background: #0b0f19;
-      color: #fff;
-      font-family: 'Poppins', sans-serif;
-      margin: 0;
-      text-align: center;
-    }
-    header {
-      background: #11162a;
-      padding: 1rem;
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #00ffd5;
-    }
-    #status {
-      margin-top: 1rem;
-      font-size: 1.2rem;
-    }
-    #chart {
-      width: 90%;
-      height: 300px;
-      margin: 2rem auto;
-      border: 2px solid #00ffd5;
-      border-radius: 8px;
-      background: rgba(0, 0, 0, 0.3);
-    }
-    #history {
-      width: 90%;
-      margin: 1rem auto;
-      text-align: left;
-      border-collapse: collapse;
-    }
-    #history th, #history td {
-      border: 1px solid #00ffd5;
-      padding: 8px;
-    }
-    #history th {
-      background: #00ffd5;
-      color: #000;
-    }
-    #plane {
-      width: 80px;
-      position: relative;
-      top: 50px;
-      animation: fly 4s infinite linear;
-    }
-    @keyframes fly {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(100vw); }
-    }
-  </style>
-</head>
-<body>
-  <header>✈️ FlyWithObed Live Aviator Dashboard</header>
-  <div id="status">Connecting to Aviator Live...</div>
-  <img id="plane" src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Airplane_silhouette.png" alt="Plane" />
-  <div id="chart">📈 Waiting for next round...</div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const statusEl = document.getElementById("status");
+  const historyBody = document.getElementById("historyBody");
 
-  <table id="history">
-    <thead>
-      <tr><th>Round</th><th>Crash Point</th></tr>
-    </thead>
-    <tbody id="historyBody"></tbody>
-  </table>
+  // ✅ Connect to your live backend
+  const socket = io("https://obedaviator.onrender.com", {
+    transports: ["websocket"],
+    reconnection: true,
+    reconnectionAttempts: 5,
+  });
 
-  <script>
-    const statusEl = document.getElementById('status');
-    const historyBody = document.getElementById('historyBody');
-    let socket = new WebSocket("wss://obedaviator.onrender.com");
+  // ✅ On connection
+  socket.on("connect", () => {
+    statusEl.textContent = "✅ Connected to Aviator Live — Waiting for next round...";
+  });
 
-    socket.onopen = () => {
-      statusEl.textContent = "✅ Connected to Aviator Live — Waiting for next round...";
-    };
+  // ✅ Listen for new flight updates from server.js
+  socket.on("flight_update", (data) => {
+    const { crashPoint } = data;
+    const round = new Date().toLocaleTimeString();
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "crash") {
-          const row = document.createElement("tr");
-          row.innerHTML = `<td>${data.round}</td><td>${data.crashPoint}x</td>`;
-          historyBody.prepend(row);
-          statusEl.textContent = `💥 Round ${data.round} crashed at ${data.crashPoint}x`;
-        } else if (data.type === "flight") {
-          statusEl.textContent = `🛫 Plane flying... current multiplier: ${data.multiplier}x`;
-        }
-      } catch (err) {
-        console.log("Error:", err);
-      }
-    };
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${round}</td><td>${crashPoint}x</td>`;
+    historyBody.prepend(row);
 
-    const socket = io("https://obedaviator.onrender.com", {
-  transports: ["websocket"],
-  secure: true,
-  reconnection: true,
-  reconnectionAttempts: 10
-});
+    statusEl.textContent = `✈️ Flight crashed at ${crashPoint}x`;
+  });
+
+  // ✅ Connection errors
+  socket.on("connect_error", (err) => {
+    statusEl.textContent = "❌ Disconnected. Reconnecting...";
+    console.error("Connection error:", err);
+  });
+</script>
 
 
-    };
-  </script>
-</body>
-</html>
