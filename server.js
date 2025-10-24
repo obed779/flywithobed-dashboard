@@ -1,100 +1,82 @@
 
+// server.js
 import express from "express";
-import http from "http";
-import { Server } from "socket.io";
+import { createServer } from "http";
+import { WebSocketServer } from "ws";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
-
 app.use(cors());
-app.use(express.static(__dirname));
 
-// ===============================
-// ✈️ FlyWithObed Aviator Engine
-// ===============================
-let round = 0;
-let isFlying = false;
-let balances = { A: 1000, B: 1000 };
-let activeBets = {};
-let crashPoint = 0;
+// Simple HTTP route to verify the server is running
+app.get("/", (req, res) => {
+  res.send("✅ Aviator Game API is live and running!");
+});
 
-// Function to start a new round
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
+
+// --- Game state ---
+let round = 1;
+let multiplier = 1.0;
+let inFlight = false;
+
+// Broadcast helper
+function broadcast(data) {
+  const message = JSON.stringify(data);
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) client.send(message);
+  });
+}
+
+// Start a new game round
 function startRound() {
-  if (isFlying) return;
-  isFlying = true;
-  round++;
-  activeBets = {};
+  inFlight = true;
+  multiplier = 1.0;
+  broadcast({ type: "round", round });
+  broadcast({ type: "log", message: `🛫 Round ${round} started.` });
 
-  crashPoint = (Math.random() * 6 + 1).toFixed(2);
-  console.log(`✈️ Round ${round} started — will crash at ${crashPoint}x`);
-
-  io.emit("roundStart", { round, multiplier: 1.0 });
-
-  let multiplier = 1.0;
   const flight = setInterval(() => {
-    multiplier += 0.05;
-    io.emit("flightUpdate", { round, multiplier: multiplier.toFixed(2) });
+    if (!inFlight) return clearInterval(flight);
 
+    multiplier += 0.05;
+    broadcast({ type: "multiplier", value: multiplier });
+
+    // Random crash point
+    const crashPoint = Math.random() * 5 + 1.1; // 1.1x – 6.1x
     if (multiplier >= crashPoint) {
+      inFlight = false;
+      broadcast({ type: "crash", round, point: crashPoint });
+      broadcast({ type: "log", message: `💥 Crashed at ${crashPoint.toFixed(2)}x` });
+
+      round++;
+      setTimeout(startRound, 3000);
       clearInterval(flight);
-      io.emit("roundCrash", { round, crashPoint });
-      console.log(`💥 Crashed at ${crashPoint}x`);
-      isFlying = false;
-      setTimeout(startRound, 5000);
     }
   }, 200);
 }
 
-// ===============================
-// 🎮 Socket Logic
-// ===============================
-io.on("connection", (socket) => {
-  console.log("✅ Client connected");
-  socket.emit("aviator_status", { status: "connected", balances });
+// Handle player connections
+wss.on("connection", (ws) => {
+  console.log("🟢 Player connected");
+  ws.send(JSON.stringify({ type: "log", message: "Connected to FlyWithObed Live backend!" }));
 
-  // Bet placing
-  socket.on("placeBet", ({ player, bet }) => {
-    if (!player || !bet) return;
-    if (balances[player] < bet) {
-      socket.emit("errorMsg", "❌ Not enough balance!");
-      return;
-    }
-    balances[player] -= bet;
-    activeBets[player] = { bet, cashedOut: false };
-    io.emit("balanceUpdate", { player, balance: balances[player] });
-    console.log(`🎲 Player ${player} bet $${bet}`);
-  });
-
-  // Cashout action
-  socket.on("cashOut", ({ player }) => {
-    const currentMultiplier = Math.min(crashPoint - 0.1, 5.0);
-    if (activeBets[player] && !activeBets[player].cashedOut) {
-      const { bet } = activeBets[player];
-      const winAmount = Math.round(bet * currentMultiplier);
-      balances[player] += winAmount;
-      activeBets[player].cashedOut = true;
-      io.emit("balanceUpdate", { player, balance: balances[player] });
-      console.log(`💰 Player ${player} cashed out $${winAmount} at ${currentMultiplier}x`);
+  ws.on("message", (msg) => {
+    try {
+      const data = JSON.parse(msg);
+      if (data.action === "bet") {
+        broadcast({ type: "log", message: `🎯 Player ${data.player} placed a bet` });
+      } else if (data.action === "cashout") {
+        broadcast({ type: "log", message: `💰 Player ${data.player} cashed out` });
+      }
+    } catch {
+      console.log("Invalid message received.");
     }
   });
-
-  socket.on("disconnect", () => console.log("❌ Client disconnected"));
 });
 
-// ===============================
-// 🚀 Start Server
-// ===============================
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  setTimeout(startRound, 2000);
+  startRound();
 });
-
-
