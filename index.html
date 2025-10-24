@@ -1,138 +1,240 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FlyWithObed Live Aviator Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
-      background: radial-gradient(circle at top, #002244, #000);
+      background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
       color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
+      font-family: "Poppins", sans-serif;
       margin: 0;
-      padding: 0;
+      text-align: center;
+      overflow-x: hidden;
     }
-    h1 {
-      margin-top: 20px;
-      color: #00e0ff;
+    header {
+      background: rgba(0, 255, 213, 0.1);
+      backdrop-filter: blur(8px);
+      padding: 1rem;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #00ffd5;
+      letter-spacing: 1px;
     }
-    .plane {
-      font-size: 60px;
-      transition: transform 0.2s ease-out;
-      margin-top: 40px;
+    #status {
+      margin-top: 1rem;
+      font-size: 1.2rem;
     }
-    .stats {
-      margin-top: 20px;
-      font-size: 20px;
+    #game {
+      margin: 2rem auto;
+      width: 90%;
+      height: 300px;
+      border: 2px solid #00ffd5;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      position: relative;
+      overflow: hidden;
     }
-    .bet-section {
+    #plane {
+      width: 90px;
+      position: absolute;
+      bottom: 30px;
+      left: 10%;
+      transition: transform 0.2s ease-in;
+    }
+    #multiplier {
+      font-size: 2rem;
+      margin-top: 1rem;
+      color: #00ffd5;
+      font-weight: bold;
+    }
+    .players {
       display: flex;
-      justify-content: center;
-      gap: 30px;
-      margin-top: 40px;
+      justify-content: space-around;
+      margin-top: 2rem;
+      flex-wrap: wrap;
     }
-    .player {
-      background: rgba(255,255,255,0.1);
-      border-radius: 15px;
-      padding: 20px;
-      width: 200px;
+    .player-box {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid #00ffd5;
+      padding: 1rem;
+      border-radius: 12px;
+      width: 45%;
+      min-width: 250px;
+    }
+    .player-box h3 {
+      color: #00ffd5;
+    }
+    input[type="number"] {
+      width: 60%;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 1rem;
     }
     button {
-      background: #00e0ff;
+      background: #00ffd5;
+      border: none;
       color: #000;
       font-weight: bold;
-      border: none;
-      padding: 10px 15px;
+      padding: 10px 18px;
       border-radius: 8px;
-      margin-top: 10px;
       cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.3s;
     }
-    table {
-      margin: 40px auto;
-      width: 80%;
+    button:hover {
+      background: #00e6c0;
+    }
+    #history {
+      margin: 2rem auto;
+      width: 90%;
       border-collapse: collapse;
-      color: #ccc;
+      color: #fff;
     }
     th, td {
-      border-bottom: 1px solid #333;
-      padding: 10px;
+      border: 1px solid #00ffd5;
+      padding: 8px;
     }
     th {
-      color: #00e0ff;
+      background: #00ffd5;
+      color: #000;
     }
   </style>
 </head>
 <body>
-  <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <div class="plane" id="plane">🛫</div>
-  <div class="stats" id="stats">Connecting...</div>
+  <header>✈️ FlyWithObed Live Aviator Dashboard</header>
 
-  <div class="bet-section">
-    <div class="player">
+  <div id="status">🛫 Connecting...</div>
+
+  <div id="game">
+    <img id="plane" src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Airplane_silhouette.png" alt="Plane">
+  </div>
+
+  <div id="multiplier">1.00x</div>
+
+  <div class="players">
+    <div class="player-box">
       <h3>👨‍✈️ Player A</h3>
-      <div>Balance: $<span id="balA">1000</span></div>
+      <p>Balance: $<span id="balA">1000</span></p>
       <input id="betA" type="number" placeholder="Enter bet" />
-      <button onclick="placeBet('A')">Bet</button>
-      <button onclick="cashout('A')">Cashout</button>
+      <br />
+      <button id="placeA">Bet</button>
+      <button id="cashA" disabled>Cashout</button>
     </div>
-    <div class="player">
+    <div class="player-box">
       <h3>🧑‍✈️ Player B</h3>
-      <div>Balance: $<span id="balB">1000</span></div>
+      <p>Balance: $<span id="balB">1000</span></p>
       <input id="betB" type="number" placeholder="Enter bet" />
-      <button onclick="placeBet('B')">Bet</button>
-      <button onclick="cashout('B')">Cashout</button>
+      <br />
+      <button id="placeB">Bet</button>
+      <button id="cashB" disabled>Cashout</button>
     </div>
   </div>
 
-  <h3>📈 History</h3>
-  <table>
+  <h2>📈 History</h2>
+  <table id="history">
     <thead>
       <tr><th>Round</th><th>Crash Point</th></tr>
     </thead>
-    <tbody id="history"></tbody>
+    <tbody id="historyBody"></tbody>
   </table>
 
   <script>
-    const socket = new WebSocket("wss://" + window.location.host);
+    const socket = new WebSocket(location.origin.replace(/^http/, 'ws'));
+    const statusEl = document.getElementById("status");
     const plane = document.getElementById("plane");
-    const stats = document.getElementById("stats");
-    const history = document.getElementById("history");
-    let multiplier = 1.0;
-    let balances = { A: 1000, B: 1000 };
-    let interval;
+    const multEl = document.getElementById("multiplier");
+    const histBody = document.getElementById("historyBody");
+    const balA = document.getElementById("balA");
+    const balB = document.getElementById("balB");
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+    let balanceA = 1000, balanceB = 1000;
+    let currentMult = 1.0;
+    let currentRound = 0;
+    let flying = false;
+
+    socket.onopen = () => {
+      statusEl.textContent = "✅ Connected to Aviator Live";
+    };
+
+    socket.onmessage = (msg) => {
+      const data = JSON.parse(msg.data);
+
       if (data.type === "flight") {
-        multiplier = data.multiplier;
-        stats.textContent = `🛫 Plane flying... ${multiplier.toFixed(2)}x`;
-        plane.style.transform = `translateY(${-multiplier * 10}px) rotate(${multiplier * 5}deg)`;
-      } else if (data.type === "crash") {
-        stats.textContent = `💥 Crashed at ${data.point.toFixed(2)}x`;
-        plane.style.transform = "translateY(0px)";
+        currentMult = parseFloat(data.multiplier);
+        multEl.textContent = currentMult.toFixed(2) + "x";
+        plane.style.left = (10 + currentMult * 8) + "%";
+        if (!flying) {
+          flying = true;
+          statusEl.textContent = "🛫 Plane flying...";
+        }
+      }
+
+      if (data.type === "crash") {
+        flying = false;
+        statusEl.textContent = `💥 Crashed at ${data.point}x`;
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${data.round}</td><td>${data.point.toFixed(2)}x</td>`;
-        history.prepend(row);
+        row.innerHTML = `<td>${data.round}</td><td>${data.point}x</td>`;
+        histBody.prepend(row);
+        resetBets();
       }
     };
 
     function placeBet(player) {
-      const input = document.getElementById(`bet${player}`);
-      const amount = parseFloat(input.value);
-      if (isNaN(amount) || amount <= 0) return alert("Enter valid bet");
-      if (balances[player] < amount) return alert("Not enough balance");
-      balances[player] -= amount;
-      document.getElementById(`bal${player}`).textContent = balances[player];
-      alert(`${player} placed $${amount} bet!`);
+      const betInput = document.getElementById("bet" + player);
+      const betAmount = parseFloat(betInput.value);
+      if (!betAmount || betAmount <= 0) return alert("Invalid bet");
+
+      if (player === "A" && betAmount <= balanceA) {
+        balanceA -= betAmount;
+        balA.textContent = balanceA.toFixed(2);
+        document.getElementById("cashA").disabled = false;
+        document.getElementById("placeA").disabled = true;
+      } else if (player === "B" && betAmount <= balanceB) {
+        balanceB -= betAmount;
+        balB.textContent = balanceB.toFixed(2);
+        document.getElementById("cashB").disabled = false;
+        document.getElementById("placeB").disabled = true;
+      } else {
+        alert("Insufficient balance");
+      }
     }
 
     function cashout(player) {
-      const win = (multiplier * 100).toFixed(2);
-      balances[player] += parseFloat(win);
-      document.getElementById(`bal${player}`).textContent = balances[player];
-      alert(`${player} cashed out at ${multiplier.toFixed(2)}x and won $${win}`);
+      const multiplier = currentMult;
+      const betAmount = parseFloat(document.getElementById("bet" + player).value);
+      const win = betAmount * multiplier;
+
+      if (player === "A") {
+        balanceA += win;
+        balA.textContent = balanceA.toFixed(2);
+        document.getElementById("cashA").disabled = true;
+      } else {
+        balanceB += win;
+        balB.textContent = balanceB.toFixed(2);
+        document.getElementById("cashB").disabled = true;
+      }
+
+      statusEl.textContent = `💸 Cashout successful at ${multiplier.toFixed(2)}x`;
     }
+
+    function resetBets() {
+      ["A", "B"].forEach(p => {
+        document.getElementById("place" + p).disabled = false;
+        document.getElementById("cash" + p).disabled = true;
+        document.getElementById("bet" + p).value = "";
+      });
+    }
+
+    document.getElementById("placeA").onclick = () => placeBet("A");
+    document.getElementById("placeB").onclick = () => placeBet("B");
+    document.getElementById("cashA").onclick = () => cashout("A");
+    document.getElementById("cashB").onclick = () => cashout("B");
   </script>
 </body>
 </html>
+
