@@ -2,33 +2,179 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>FlyWithObed Live Aviator Dashboard</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
-    body { font-family: Arial; background: #0a0a1a; color: white; text-align: center; padding: 50px; }
-    h1 { color: #00ffcc; }
-    #multiplier { font-size: 48px; margin-top: 20px; }
+    :root { --bg:#071022; --panel:#0f1724; --accent:#00c2a8; --danger:#ff4d4d; color-scheme: dark; }
+    body { margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue"; background:var(--bg); color:#e6eef6; }
+    header { padding:18px 24px; background:linear-gradient(90deg,#071022,#071836); display:flex; justify-content:space-between; align-items:center; }
+    h1 { margin:0; font-size:18px; color:var(--accent); }
+    .container { display:grid; grid-template-columns: 1fr 360px; gap:18px; padding:20px; max-width:1100px; margin:20px auto; }
+    .card { background:var(--panel); border-radius:12px; padding:16px; box-shadow: 0 6px 18px rgba(2,6,23,.6); }
+    .game { min-height:360px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:14px; }
+    .plane { font-size:48px; transition: transform .1s linear; }
+    .mult { font-size:40px; color:var(--accent); font-weight:700; }
+    .status { color:#9fb3c9; }
+    .history { max-height:280px; overflow:auto; margin-top:8px; }
+    table { width:100%; border-collapse:collapse; color:#cfe8f3; }
+    th, td { padding:8px 6px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.03); font-size:14px; }
+    th { color:#9fb3c9; font-weight:600; }
+    .crash { color:var(--danger); font-weight:700; }
+    .controls { display:flex; gap:8px; margin-top:6px; }
+    button { background:var(--accent); color:#001f1a; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+    button.secondary { background:transparent; color:#9fb3c9; border:1px solid rgba(255,255,255,0.03); }
+    footer { text-align:center; color:#8aa0b6; padding:14px 0 40px; }
+    @media(max-width:880px){ .container{grid-template-columns:1fr; padding:12px} .card{padding:12px} }
   </style>
 </head>
 <body>
-  <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="multiplier">Waiting...</div>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script>
-    const socket = io();
-    const multiplierDisplay = document.getElementById("multiplier");
+  <header>
+    <h1>✈️ FlyWithObed — Live Aviator</h1>
+    <div style="font-size:13px;color:#9fb3c9">Live via Socket.IO</div>
+  </header>
 
-    socket.on("multiplierUpdate", (data) => {
-      multiplierDisplay.textContent = data.multiplier + "x";
-    });
+  <div class="container">
+    <div class="card game">
+      <div id="plane" class="plane">🛩️</div>
+      <div id="multiplier" class="mult">Waiting...</div>
+      <div id="status" class="status">Connecting to server…</div>
 
-    socket.on("roundEnded", (data) => {
-      multiplierDisplay.textContent = "💥 Crashed at " + data.crashPoint + "x";
-    });
+      <div class="controls">
+        <button id="btnStart">Request Start</button>
+        <button id="btnHistory" class="secondary">Clear Display History</button>
+      </div>
 
-    socket.on("roundStarted", (data) => {
-      multiplierDisplay.textContent = "🛫 Flying...";
+      <div style="width:100%; margin-top:8px;">
+        <h3 style="margin:8px 0 10px;color:#9fb3c9">Crash History (latest first)</h3>
+        <div class="history card" id="historyBox" style="padding:8px; background:rgba(255,255,255,0.02);">
+          <table id="historyTable"><thead><tr><th>Round</th><th>Crash</th><th>Time (UTC)</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;color:#9fb3c9">Info</h3>
+      <p style="color:#cfe8f3; margin:6px 0">This dashboard listens to server events:</p>
+      <ul style="color:#9fb3c9; padding-left:18px">
+        <li><code>roundStart</code> — new flight started</li>
+        <li><code>multiplierUpdate</code> — live multiplier ticks</li>
+        <li><code>roundEnd</code> — flight crashed</li>
+      </ul>
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03); margin:12px 0">
+      <div style="font-size:13px;color:#9fb3c9">Server status:</div>
+      <pre id="serverInfo" style="background:transparent;border:none;padding:0;margin:8px 0;color:#cfe8f3"></pre>
+      <div style="margin-top:12px">
+        <div style="font-size:13px;color:#9fb3c9;margin-bottom:8px">Quick tips</div>
+        <ol style="color:#9fb3c9;padding-left:18px;margin:0">
+          <li>Make sure server is redeployed after code changes.</li>
+          <li>Open browser console (F12) to see socket logs/errors.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <footer>Made for FlyWithObed — LIVE multiplayer demo</footer>
+
+<script>
+  // connect to same origin
+  const socket = io();
+
+  const multiplierEl = document.getElementById('multiplier');
+  const statusEl = document.getElementById('status');
+  const planeEl = document.getElementById('plane');
+  const historyTableBody = document.querySelector('#historyTable tbody');
+  const serverInfo = document.getElementById('serverInfo');
+  const btnStart = document.getElementById('btnStart');
+  const btnHistory = document.getElementById('btnHistory');
+
+  let animationFrame;
+  let planeX = 0;
+  let currentRound = 0;
+
+  function animatePlane() {
+    planeX += 3;
+    planeEl.style.transform = `translateX(${planeX}px)`;
+    animationFrame = requestAnimationFrame(animatePlane);
+  }
+  function resetPlanePos() {
+    cancelAnimationFrame(animationFrame);
+    planeX = 0;
+    planeEl.style.transform = `translateX(0px)`;
+  }
+
+  // Socket events
+  socket.on('connect', () => {
+    statusEl.textContent = '🟢 Connected to server';
+    serverInfo.textContent = `Socket ID: ${socket.id}`;
+    console.log('connected', socket.id);
+  });
+
+  socket.on('welcome', (data) => {
+    console.log('welcome', data);
+    serverInfo.textContent = JSON.stringify(data, null, 2);
+    if (data.history && data.history.length) {
+      renderHistory(data.history);
+    }
+  });
+
+  socket.on('roundStart', (data) => {
+    currentRound++;
+    statusEl.textContent = '🚀 Flight started';
+    multiplierEl.textContent = '1.00x';
+    planeEl.textContent = '🛫';
+    planeEl.classList.remove('crash');
+    resetPlanePos();
+    animatePlane();
+  });
+
+  socket.on('multiplierUpdate', (data) => {
+    // data.multiplier expected string or number
+    const value = parseFloat(data.multiplier);
+    multiplierEl.textContent = value.toFixed(2) + 'x';
+    // move plane proportionally
+    planeEl.style.transform = `translateX(${Math.min(600, value * 20)}px)`;
+  });
+
+  socket.on('roundEnd', (data) => {
+    cancelAnimationFrame(animationFrame);
+    planeEl.textContent = '💥';
+    planeEl.classList.add('crash');
+    statusEl.textContent = `💥 Crashed at ${data.crashPoint}x`;
+    multiplierEl.textContent = `${parseFloat(data.crashPoint).toFixed(2)}x`;
+    // update history table (server sends full history)
+    if (data.history) renderHistory(data.history);
+  });
+
+  socket.on('disconnect', () => {
+    statusEl.textContent = '🔴 Disconnected';
+  });
+
+  socket.on('connect_error', (err) => {
+    statusEl.textContent = '⚠️ Connection error';
+    console.error('connect_error', err);
+  });
+
+  function renderHistory(history) {
+    // server sends latest-first
+    historyTableBody.innerHTML = '';
+    history.forEach((h, idx) => {
+      const tr = document.createElement('tr');
+      const roundNum = history.length - idx;
+      tr.innerHTML = `<td>${roundNum}</td><td class="crash">${parseFloat(h.crashPoint).toFixed(2)}x</td><td>${new Date(h.time || h.ts || Date.now()).toUTCString()}</td>`;
+      historyTableBody.appendChild(tr);
     });
-  </script>
+  }
+
+  btnStart.addEventListener('click', () => {
+    socket.emit('requestStart');
+  });
+
+  btnHistory.addEventListener('click', () => {
+    historyTableBody.innerHTML = '';
+  });
+</script>
 </body>
 </html>
+
