@@ -1,5 +1,5 @@
 
-// ✅ FlyWithObed Aviator Game Server
+// ✅ FlyWithObed Aviator Game Server (Final Working Version)
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
@@ -11,42 +11,38 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
-});
+const io = new Server(server);
 
 const PORT = process.env.PORT || 10000;
 
-// Serve the dashboard and all static files
+// Serve dashboard and other static files from /public
 app.use(express.static(path.join(__dirname, "public")));
 
-// API test route
+// API check route
 app.get("/", (req, res) => {
   res.send("✅ FlyWithObed Aviator Game API is live and running!");
 });
 
-// 🛫 Game logic
+// --- GAME LOGIC ---
 let multiplier = 1.0;
 let isFlying = false;
 let crashPoint = 0;
 let roundInterval;
 
-function startNewRound() {
-  isFlying = true;
+function startRound() {
   multiplier = 1.0;
-  crashPoint = (Math.random() * 9 + 1).toFixed(2); // random 1.00x–10.00x
+  isFlying = true;
+  crashPoint = (Math.random() * 9 + 1).toFixed(2); // 1.00x–10.00x random crash
   io.emit("roundStart", { crashPoint });
-  console.log(`🎮 New round started! Will crash at: ${crashPoint}`);
+  console.log(`🛫 Round started. Crash at ${crashPoint}x`);
 
   roundInterval = setInterval(() => {
     if (multiplier >= crashPoint) {
-      isFlying = false;
       clearInterval(roundInterval);
+      isFlying = false;
       io.emit("roundCrash", { multiplier });
-      console.log(`💥 Crashed at ${multiplier}x`);
-      setTimeout(startNewRound, 4000); // next round after 4s
+      console.log(`💥 Crashed at ${multiplier.toFixed(2)}x`);
+      setTimeout(startRound, 4000);
     } else {
       multiplier += 0.05;
       io.emit("multiplierUpdate", { multiplier: multiplier.toFixed(2) });
@@ -55,22 +51,19 @@ function startNewRound() {
 }
 
 // Start first round
-startNewRound();
+startRound();
 
-// 🧠 Socket events
+// --- SOCKET CONNECTION ---
 io.on("connection", (socket) => {
-  console.log(`👨‍✈️ Player connected: ${socket.id}`);
+  console.log("👨‍✈️ Player connected:", socket.id);
   socket.emit("connected", { message: "Welcome to FlyWithObed Aviator!" });
-
-  // send current multiplier
   socket.emit("multiplierUpdate", { multiplier: multiplier.toFixed(2) });
 
   socket.on("disconnect", () => {
-    console.log(`🧑‍✈️ Player disconnected: ${socket.id}`);
+    console.log("🧑‍✈️ Player disconnected:", socket.id);
   });
 });
 
-// Start server
 server.listen(PORT, () => {
-  console.log(`🚀 FlyWithObed Aviator API running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
