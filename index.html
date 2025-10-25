@@ -8,10 +8,71 @@
 </head>
 <body>
   <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="status">Connecting...</div>
-  <div id="multiplier">Waiting...</div>
+
+  <div id="dashboard">
+    <p id="status">Connecting...</p>
+    <div id="multiplier">---</div>
+    <div id="log"></div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
+  <script>
+    const socket = io();
+    const statusEl = document.getElementById("status");
+    const multiplierEl = document.getElementById("multiplier");
+    const logEl = document.getElementById("log");
+
+    socket.on("connect", () => {
+      statusEl.textContent = "✅ Connected to Aviator Server!";
+      statusEl.style.color = "#00ff9c";
+    });
+
+    socket.on("multiplier", (value) => {
+      multiplierEl.textContent = value + "x";
+      multiplierEl.style.color = "#ffcc00";
+      logEl.textContent = "✈️ New round: " + value + "x";
+    });
+
+    socket.on("disconnect", () => {
+      statusEl.textContent = "❌ Disconnected";
+      statusEl.style.color = "red";
+    });
+  </script>
+
+  <style>
+    body {
+      background-color: #0a0a0a;
+      color: #00ff9c;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 60px;
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 1.8rem;
+    }
+
+    #dashboard {
+      margin-top: 30px;
+    }
+
+    #status {
+      font-size: 1rem;
+      color: #999;
+      margin-bottom: 20px;
+    }
+
+    #multiplier {
+      font-size: 4rem;
+      color: #ffcc00;
+      margin-bottom: 20px;
+    }
+
+    #log {
+      color: #aaa;
+      font-size: 1.1rem;
+    }
+  </style>
 </body>
 </html>
