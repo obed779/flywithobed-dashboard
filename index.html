@@ -1,79 +1,74 @@
 
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>✈️ FlyWithObed Live Aviator Dashboard</title>
-    <style>
-      body {
-        background-color: #111;
-        color: #fff;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        padding: 20px;
-      }
-      h1 {
-        color: #00d4ff;
-      }
-      #multiplier {
-        font-size: 48px;
-        margin: 20px 0;
-      }
-      table {
-        width: 80%;
-        margin: 20px auto;
-        border-collapse: collapse;
-        color: white;
-      }
-      th, td {
-        border: 1px solid #555;
-        padding: 8px;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-    <div id="status">Connecting to live server...</div>
-    <div id="multiplier">🛩️ <span id="value">1.00x</span></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>✈️ FlyWithObed Live Aviator Dashboard</title>
+  <style>
+    body {
+      background: #0d1117;
+      color: #f0f6fc;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    .plane { font-size: 3rem; }
+    .multiplier {
+      font-size: 2.5rem;
+      margin: 10px 0;
+      color: #58a6ff;
+    }
+    table {
+      width: 60%;
+      margin: 30px auto;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #30363d;
+      padding: 10px;
+    }
+    th { background: #161b22; }
+    .crashed { color: #ff4d4d; }
+    .started { color: #4dff91; }
+  </style>
+</head>
+<body>
+  <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
+  <div id="status">Connecting to live server...</div>
+  <div class="plane">🛩️</div>
+  <div class="multiplier" id="multiplier">1.00x</div>
 
-    <h3>📈 History</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Round</th>
-          <th>Crash Point</th>
-        </tr>
-      </thead>
-      <tbody id="history"></tbody>
-    </table>
+  <h2>📈 History</h2>
+  <table id="history">
+    <tr><th>Round</th><th>Crash Point</th></tr>
+  </table>
 
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>
-      const socket = io();
-      const statusDiv = document.getElementById("status");
-      const multiplierValue = document.getElementById("value");
-      const historyTable = document.getElementById("history");
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const socket = io();
 
-      socket.on("status", msg => {
-        statusDiv.textContent = msg;
-      });
+    socket.on("status", msg => {
+      document.getElementById("status").textContent = msg;
+    });
 
-      socket.on("roundStart", ({ round, target }) => {
-        statusDiv.textContent = `🟢 Round ${round} started (target ${target}x)`;
-        multiplierValue.textContent = "1.00x";
-      });
+    socket.on("roundStart", data => {
+      document.getElementById("status").innerHTML =
+        `🟢 Round ${data.round} started (target ${data.crashPoint}x)`;
+      document.getElementById("multiplier").textContent = "1.00x";
+    });
 
-      socket.on("multiplierUpdate", multiplier => {
-        multiplierValue.textContent = `${multiplier}x`;
-      });
+    socket.on("multiplierUpdate", data => {
+      document.getElementById("multiplier").textContent = `${data.multiplier}x`;
+    });
 
-      socket.on("roundCrash", ({ round, crashPoint }) => {
-        statusDiv.textContent = `💥 Crashed at ${crashPoint}x`;
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${round}</td><td>${crashPoint}x</td>`;
-        historyTable.prepend(row);
-      });
-    </script>
-  </body>
+    socket.on("roundCrash", data => {
+      document.getElementById("status").innerHTML =
+        `💥 Round ${data.round} crashed at ${data.crashPoint}x`;
+      const table = document.getElementById("history");
+      const row = table.insertRow(1);
+      row.innerHTML = `<td>${data.round}</td><td class="crashed">${data.crashPoint}x</td>`;
+    });
+  </script>
+</body>
 </html>
