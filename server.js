@@ -1,58 +1,73 @@
 
-// server.js
+// ✅ FlyWithObed Aviator Game Server
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
-
-app.use(express.static("public")); // serve dashboard.html and assets
+const io = new Server(server);
 
 const PORT = process.env.PORT || 10000;
 
-// ========= Aviator Simulation =========
-let currentMultiplier = 1.0;
-let gameRunning = false;
-let crashPoint = 0;
+// Serve static files (like dashboard.html)
+app.use(express.static(path.join(__dirname, "public")));
+
+// Default route
+app.get("/", (req, res) => {
+  res.send("✅ FlyWithObed Aviator Game API is live and running!");
+});
+
+// Game state
+let crashPoint = 1.0;
+let isFlying = false;
+
+// Random crash generator
+function getCrashPoint() {
+  const r = Math.random();
+  if (r < 0.01) return 100;
+  return (1 / (1 - r)).toFixed(2);
+}
 
 function startRound() {
-  if (gameRunning) return;
-  gameRunning = true;
-  currentMultiplier = 1.0;
-  crashPoint = (Math.random() * 10 + 1).toFixed(2);
+  crashPoint = parseFloat(getCrashPoint());
+  isFlying = true;
+  io.emit("roundStarted", { crashPoint });
+  console.log(`🎮 New round started! Will crash at: ${crashPoint}`);
 
-  io.emit("roundStart");
-  console.log("🎮 New round started! Will crash at:", crashPoint);
+  let multiplier = 1.0;
+  const flight = setInterval(() => {
+    multiplier += 0.01;
+    io.emit("multiplierUpdate", { multiplier: multiplier.toFixed(2) });
 
-  const interval = setInterval(() => {
-    if (currentMultiplier >= crashPoint) {
-      clearInterval(interval);
-      gameRunning = false;
-      io.emit("roundEnd", { crashPoint });
-      console.log(`💥 Crashed at ${crashPoint}x`);
-      setTimeout(startRound, 3000);
-    } else {
-      currentMultiplier += 0.01;
-      io.emit("multiplierUpdate", { multiplier: currentMultiplier });
+    if (multiplier >= crashPoint) {
+      clearInterval(flight);
+      io.emit("roundEnded", { crashPoint });
+      console.log(`💥 Plane crashed at ${crashPoint}x`);
+      isFlying = false;
+      setTimeout(startRound, 5000);
     }
   }, 100);
 }
 
-startRound();
-
 io.on("connection", (socket) => {
-  console.log("🟢 Player connected:", socket.id);
-  socket.emit("status", "✅ FlyWithObed Aviator Game API is live and running!");
-  socket.on("disconnect", () => console.log("🔴 Player disconnected:", socket.id));
-});
+  console.log("👨‍✈️ Player connected:", socket.id);
+  socket.emit("status", {
+    message: "✅ Connected to FlyWithObed Aviator Live!",
+  });
 
-app.get("/", (req, res) => {
-  res.send("✅ FlyWithObed Aviator Game API is live and running!");
+  if (!isFlying) startRound();
+
+  socket.on("disconnect", () => {
+    console.log("🧑‍✈️ Player disconnected:", socket.id);
+  });
 });
 
 server.listen(PORT, () => {
   console.log(`🚀 FlyWithObed Aviator API running on port ${PORT}`);
 });
-
