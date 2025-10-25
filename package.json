@@ -1,17 +1,16 @@
 {
   "name": "flywithobed-dashboard",
   "version": "1.0.0",
-  "description": "FlyWithObed Aviator Dashboard",
-  "type": "module",
+  "description": "FlyWithObed Aviator Live Dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "author": "Obed",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "ws": "^8.17.0"
+    "ws": "^8.15.1"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
