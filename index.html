@@ -5,184 +5,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FlyWithObed Live Aviator Dashboard</title>
-  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
   <style>
     body {
-      font-family: "Poppins", sans-serif;
-      background: #0d1117;
-      color: #fff;
-      text-align: center;
       margin: 0;
-      padding: 0;
+      background: #0b1120;
+      color: #fff;
+      font-family: "Poppins", sans-serif;
+      text-align: center;
     }
-    h1 {
-      margin-top: 20px;
-      color: #00bcd4;
+    header {
+      background: #1e293b;
+      padding: 1rem;
+      font-size: 1.3rem;
+      font-weight: 600;
     }
     .plane {
-      font-size: 60px;
+      font-size: 3rem;
       transition: transform 0.1s linear;
     }
-    #multiplier {
-      font-size: 48px;
-      margin: 20px 0;
-      color: #00ff99;
+    .multiplier {
+      font-size: 2rem;
+      margin: 1rem 0;
+      color: #22d3ee;
     }
-    .players {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 20px;
-    }
-    .player {
-      background: #161b22;
-      border-radius: 10px;
-      padding: 15px;
-      width: 40%;
-    }
-    button {
-      background: #00bcd4;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      margin: 5px;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #00acc1;
-    }
-    .history {
-      background: #161b22;
-      border-radius: 10px;
-      margin: 30px auto;
-      padding: 20px;
-      width: 80%;
-      text-align: left;
+    .crashed {
+      color: #ef4444;
     }
     table {
-      width: 100%;
+      margin: 1rem auto;
       border-collapse: collapse;
-      color: #ccc;
+      width: 80%;
     }
     th, td {
-      padding: 10px;
-      border-bottom: 1px solid #222;
-      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #334155;
     }
-    .crash {
-      color: #ff4d4d;
+    th {
+      background: #1e293b;
     }
-    .flying {
-      color: #00ff99;
+    .footer {
+      margin-top: 2rem;
+      color: #64748b;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
-  <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="status">Connecting...</div>
-  <div class="plane" id="plane">🛩️</div>
-  <div id="multiplier">1.00x</div>
+  <header>✈️ FlyWithObed Live Aviator Dashboard</header>
 
-  <div class="players">
-    <div class="player">
-      <h3>👨‍✈️ Player A</h3>
-      <div>Balance: $<span id="balanceA">1000</span></div>
-      <input id="betA" type="number" placeholder="Enter bet" />
-      <button onclick="placeBet('A')">Bet</button>
-      <button onclick="cashout('A')">Cashout</button>
-    </div>
-    <div class="player">
-      <h3>🧑‍✈️ Player B</h3>
-      <div>Balance: $<span id="balanceB">1000</span></div>
-      <input id="betB" type="number" placeholder="Enter bet" />
-      <button onclick="placeBet('B')">Bet</button>
-      <button onclick="cashout('B')">Cashout</button>
-    </div>
-  </div>
+  <div id="game">
+    <div class="plane" id="plane">🛩️</div>
+    <div id="multiplier" class="multiplier">1.00x</div>
+    <div id="status">Waiting for next round...</div>
 
-  <div class="history">
     <h3>📈 History</h3>
-    <table id="historyTable">
+    <table>
       <thead>
-        <tr><th>Round</th><th>Crash Point</th></tr>
+        <tr>
+          <th>Round</th>
+          <th>Crash Point</th>
+        </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="history"></tbody>
     </table>
   </div>
 
+  <div class="footer">✅ Connected to FlyWithObed Aviator API</div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     const socket = io("https://flywithobed-skyhigh.onrender.com");
-    const status = document.getElementById("status");
-    const multiplierDisplay = document.getElementById("multiplier");
     const plane = document.getElementById("plane");
-    const historyTable = document.getElementById("historyTable").querySelector("tbody");
+    const multiplierDisplay = document.getElementById("multiplier");
+    const status = document.getElementById("status");
+    const historyTable = document.getElementById("history");
 
-    let roundCount = 0;
-    let balances = { A: 1000, B: 1000 };
-    let currentBets = { A: 0, B: 0 };
-    let isFlying = false;
+    let animationFrame;
+    let position = 0;
+
+    function movePlane() {
+      position += 3;
+      plane.style.transform = `translateX(${position}px)`;
+      animationFrame = requestAnimationFrame(movePlane);
+    }
 
     socket.on("connect", () => {
-      status.textContent = "✅ Connected to Live Aviator API";
+      status.textContent = "🟢 Connected! Waiting for next flight...";
+    });
+
+    socket.on("welcome", (data) => {
+      historyTable.innerHTML = "";
+      data.history.forEach((h) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${h.round}</td><td>${h.crashPoint}x</td>`;
+        historyTable.appendChild(row);
+      });
     });
 
     socket.on("roundStart", (data) => {
-      roundCount++;
-      isFlying = true;
-      multiplierDisplay.classList.add("flying");
-      multiplierDisplay.classList.remove("crash");
-      status.textContent = data.message;
+      cancelAnimationFrame(animationFrame);
+      position = 0;
+      plane.textContent = "🛫";
+      status.textContent = "🚀 Flying...";
       multiplierDisplay.textContent = "1.00x";
-      plane.style.transform = "translateX(0px)";
+      plane.classList.remove("crashed");
+      movePlane();
     });
 
     socket.on("multiplierUpdate", (data) => {
-      if (!isFlying) return;
-      multiplierDisplay.textContent = data.multiplier + "x";
-      const distance = parseFloat(data.multiplier) * 20;
-      plane.style.transform = `translateX(${distance}px)`;
+      multiplierDisplay.textContent = `${data.multiplier.toFixed(2)}x`;
     });
 
     socket.on("roundEnd", (data) => {
-      isFlying = false;
-      multiplierDisplay.classList.remove("flying");
-      multiplierDisplay.classList.add("crash");
-      multiplierDisplay.textContent = `💥 Crashed at ${data.history[0].crashPoint}x`;
-      status.textContent = "💥 Crash! Next round starting...";
-      updateHistory(data.history);
+      cancelAnimationFrame(animationFrame);
+      plane.textContent = "💥";
+      plane.classList.add("crashed");
+      status.textContent = `💥 Crashed at ${data.crashPoint}x`;
+      const newRow = document.createElement("tr");
+      newRow.innerHTML = `<td>${historyTable.rows.length + 1}</td><td>${data.crashPoint}x</td>`;
+      historyTable.prepend(newRow);
     });
 
-    function updateHistory(history) {
-      historyTable.innerHTML = "";
-      history.forEach((h, i) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${i + 1}</td><td class="crash">${h.crashPoint}x</td>`;
-        historyTable.appendChild(row);
-      });
-    }
-
-    function placeBet(player) {
-      const betInput = document.getElementById(`bet${player}`).value;
-      const betAmount = parseFloat(betInput);
-      if (isNaN(betAmount) || betAmount <= 0) return alert("Enter a valid bet amount");
-      if (balances[player] < betAmount) return alert("Not enough balance!");
-      balances[player] -= betAmount;
-      currentBets[player] = betAmount;
-      document.getElementById(`balance${player}`).textContent = balances[player].toFixed(2);
-      alert(`Player ${player} placed $${betAmount}`);
-    }
-
-    function cashout(player) {
-      if (!isFlying || currentBets[player] === 0) return;
-      const multiplier = parseFloat(multiplierDisplay.textContent);
-      const winnings = currentBets[player] * multiplier;
-      balances[player] += winnings;
-      currentBets[player] = 0;
-      document.getElementById(`balance${player}`).textContent = balances[player].toFixed(2);
-      alert(`Player ${player} cashed out at ${multiplier.toFixed(2)}x!`);
-    }
+    socket.on("disconnect", () => {
+      status.textContent = "🔴 Disconnected. Waiting to reconnect...";
+    });
   </script>
 </body>
 </html>
-
