@@ -2,9 +2,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛩️ FlyWithObed Aviator Dashboard</title>
   <style>
     body {
       background: radial-gradient(circle at center, #001f3f, #000);
@@ -27,19 +27,19 @@
 <body>
   <h1>🛩️ FlyWithObed Aviator Live Dashboard</h1>
   <div class="plane">✈️</div>
-  <div id="multiplier" class="multiplier">Waiting for flight...</div>
+  <div id="multiplier" class="multiplier">Connecting...</div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const display = document.getElementById("multiplier");
 
-    socket.on("multiplier", value => {
+    socket.on("multiplier", (value) => {
       display.textContent = value + "x";
       display.classList.remove("crashed");
     });
 
-    socket.on("crash", value => {
+    socket.on("crash", (value) => {
       display.textContent = "💥 Crashed at " + value + "x";
       display.classList.add("crashed");
     });
