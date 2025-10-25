@@ -7,15 +7,15 @@
     <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
-      body { font-family: Arial; text-align: center; background: #0b0d17; color: white; }
+      body { font-family: Arial; background: #0b0d17; color: white; text-align: center; }
       h1 { color: #ffcc00; }
-      #multiplier { font-size: 4em; margin: 20px; }
+      #multiplier { font-size: 5em; margin: 20px; }
       #status { font-size: 1.5em; margin-top: 10px; }
     </style>
   </head>
   <body>
     <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-    <div id="multiplier">Waiting...</div>
+    <div id="multiplier">Loading...</div>
     <div id="status">Connecting...</div>
 
     <script>
@@ -28,7 +28,7 @@
       });
 
       socket.on("roundStart", (data) => {
-        status.textContent = `🛫 Flying! (Will crash at ${data.crashPoint}x)`;
+        status.textContent = `🛫 Flying! (Crash at ${data.crashPoint}x)`;
         multiplier.textContent = "1.00x";
       });
 
