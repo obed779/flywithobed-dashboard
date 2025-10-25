@@ -7,58 +7,27 @@
     <title>✈️ FlyWithObed Live Aviator Dashboard</title>
     <style>
       body {
+        background-color: #111;
+        color: #fff;
         font-family: Arial, sans-serif;
         text-align: center;
-        background-color: #101010;
-        color: white;
-        margin: 0;
-        padding: 0;
+        padding: 20px;
       }
       h1 {
         color: #00d4ff;
-        margin-top: 20px;
-      }
-      #status {
-        margin: 10px;
-        font-size: 18px;
       }
       #multiplier {
-        font-size: 60px;
-        margin-top: 20px;
-      }
-      .players {
-        display: flex;
-        justify-content: center;
-        gap: 40px;
-        margin-top: 30px;
-      }
-      .player {
-        background: #1a1a1a;
-        border-radius: 10px;
-        padding: 20px;
-        width: 220px;
-        box-shadow: 0 0 10px #00d4ff33;
-      }
-      button {
-        margin-top: 10px;
-        padding: 8px 16px;
-        background-color: #00d4ff;
-        color: #000;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-      button:hover {
-        background-color: #00a8cc;
+        font-size: 48px;
+        margin: 20px 0;
       }
       table {
         width: 80%;
         margin: 20px auto;
         border-collapse: collapse;
+        color: white;
       }
-      th,
-      td {
-        border: 1px solid #444;
+      th, td {
+        border: 1px solid #555;
         padding: 8px;
       }
     </style>
@@ -68,27 +37,43 @@
     <div id="status">Connecting to live server...</div>
     <div id="multiplier">🛩️ <span id="value">1.00x</span></div>
 
-    <div class="players">
-      <div class="player">
-        <h3>👨‍✈️ Player A</h3>
-        <div>Balance: $<span id="balanceA">1000</span></div>
-        <input id="betA" type="number" placeholder="Enter bet" />
-        <br />
-        <button onclick="placeBet('A')">Bet</button>
-        <button onclick="cashOut('A')">Cashout</button>
-      </div>
-      <div class="player">
-        <h3>🧑‍✈️ Player B</h3>
-        <div>Balance: $<span id="balanceB">1000</span></div>
-        <input id="betB" type="number" placeholder="Enter bet" />
-        <br />
-        <button onclick="placeBet('B')">Bet</button>
-        <button onclick="cashOut('B')">Cashout</button>
-      </div>
-    </div>
-
     <h3>📈 History</h3>
     <table>
       <thead>
         <tr>
-         
+          <th>Round</th>
+          <th>Crash Point</th>
+        </tr>
+      </thead>
+      <tbody id="history"></tbody>
+    </table>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+      const socket = io();
+      const statusDiv = document.getElementById("status");
+      const multiplierValue = document.getElementById("value");
+      const historyTable = document.getElementById("history");
+
+      socket.on("status", msg => {
+        statusDiv.textContent = msg;
+      });
+
+      socket.on("roundStart", ({ round, target }) => {
+        statusDiv.textContent = `🟢 Round ${round} started (target ${target}x)`;
+        multiplierValue.textContent = "1.00x";
+      });
+
+      socket.on("multiplierUpdate", multiplier => {
+        multiplierValue.textContent = `${multiplier}x`;
+      });
+
+      socket.on("roundCrash", ({ round, crashPoint }) => {
+        statusDiv.textContent = `💥 Crashed at ${crashPoint}x`;
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${round}</td><td>${crashPoint}x</td>`;
+        historyTable.prepend(row);
+      });
+    </script>
+  </body>
+</html>
