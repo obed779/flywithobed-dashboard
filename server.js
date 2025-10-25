@@ -1,7 +1,5 @@
 
-// ===============================
-// ✈️ FlyWithObed Aviator Backend
-// ===============================
+// server.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -11,111 +9,118 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // allow dashboard connection
-  },
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
+const PORT = process.env.PORT || 10000;
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-let round = 0;
-let isFlying = false;
-let multiplier = 1.0;
-let playerBalances = { A: 1000, B: 1000 };
-let history = [];
-
-// Serve base API message
+// Root route
 app.get("/", (req, res) => {
   res.send("✅ FlyWithObed Aviator Game API is live and running!");
 });
 
-// ============= SOCKET HANDLING =============
+// --- Game Logic Variables ---
+let crashPoint = 1.0;
+let multiplier = 1.0;
+let inRound = false;
+let history = [];
+let players = {}; // Track balances and bets
+
+// --- Helper Functions ---
+function generateCrashPoint() {
+  // Randomly generate crash point between 1.00x - 10.00x
+  let r = Math.random();
+  if (r < 0.01) return 1.0;
+  return parseFloat((1 / (1 - r)).toFixed(2));
+}
+
+function startNewRound() {
+  inRound = true;
+  multiplier = 1.0;
+  crashPoint = generateCrashPoint();
+
+  io.emit("roundStart", { message: "✈️ Plane is taking off!", crashPoint });
+
+  const flight = setInterval(() => {
+    multiplier += 0.01;
+
+    // Send live multiplier updates
+    io.emit("multiplierUpdate", { multiplier: multiplier.toFixed(2) });
+
+    // Crash condition
+    if (multiplier >= crashPoint) {
+      clearInterval(flight);
+      inRound = false;
+      history.unshift({ crashPoint: crashPoint.toFixed(2) });
+      if (history.length > 10) history.pop();
+
+      io.emit("roundEnd", {
+        message: `💥 Plane crashed at ${crashPoint.toFixed(2)}x`,
+        history
+      });
+
+      // Start new round after 5 seconds
+      setTimeout(startNewRound, 5000);
+    }
+  }, 100); // updates every 100ms
+}
+
+// --- Socket.IO Events ---
 io.on("connection", (socket) => {
-  console.log("🟢 Player connected:", socket.id);
+  console.log(`🟢 New player connected: ${socket.id}`);
 
-  // Send initialization data
-  socket.emit("balanceUpdate", { player: "A", balance: playerBalances.A });
-  socket.emit("balanceUpdate", { player: "B", balance: playerBalances.B });
+  // Initialize player balance
+  players[socket.id] = { balance: 1000, bet: 0, cashout: null };
 
-  // Send past history
-  history.slice(-10).forEach((h) => {
-    socket.emit("roundEnd", h);
+  socket.emit("connected", {
+    message: "Welcome to FlyWithObed Aviator!",
+    balance: players[socket.id].balance,
+    history
   });
 
-  // Chat message handler
-  socket.on("chatMessage", (msg) => {
-    const fullMsg = `💬 ${socket.id.slice(0, 4)}: ${msg}`;
-    io.emit("chatMessage", fullMsg);
-  });
-
-  // Betting
-  socket.on("bet", (data) => {
-    const { player, amount } = data;
-    if (!isFlying && playerBalances[player] >= amount) {
-      playerBalances[player] -= amount;
-      io.emit("balanceUpdate", { player, balance: playerBalances[player] });
-      io.emit("chatMessage", `🎲 Player ${player} bet $${amount}`);
-      socket.data.bet = { player, amount, active: true, cashout: null };
+  // Handle new bet
+  socket.on("placeBet", (amount) => {
+    const player = players[socket.id];
+    if (!inRound && player.balance >= amount) {
+      player.balance -= amount;
+      player.bet = amount;
+      socket.emit("betConfirmed", { bet: amount, balance: player.balance });
+      io.emit("betPlaced", { playerId: socket.id, amount });
     }
   });
 
-  // Cashout
-  socket.on("cashout", (data) => {
-    const { player } = data;
-    if (isFlying && socket.data.bet && socket.data.bet.active) {
-      const win = socket.data.bet.amount * multiplier;
-      playerBalances[player] += win;
-      socket.data.bet.active = false;
-      io.emit("balanceUpdate", { player, balance: playerBalances[player] });
-      io.emit(
-        "chatMessage",
-        `💰 Player ${player} cashed out at ${multiplier.toFixed(2)}x and won $${win.toFixed(2)}`
-      );
+  // Handle manual cashout
+  socket.on("cashout", () => {
+    const player = players[socket.id];
+    if (inRound && player.bet > 0) {
+      const winnings = player.bet * multiplier;
+      player.balance += winnings;
+      player.bet = 0;
+      player.cashout = multiplier;
+      socket.emit("cashedOut", {
+        winnings: winnings.toFixed(2),
+        balance: player.balance
+      });
     }
   });
 
   socket.on("disconnect", () => {
-    console.log("🔴 Player disconnected:", socket.id);
+    console.log(`🔴 Player disconnected: ${socket.id}`);
+    delete players[socket.id];
   });
 });
 
-// ============= GAME LOOP =============
-function startRound() {
-  if (isFlying) return;
+// --- Start the first game round ---
+setTimeout(startNewRound, 3000);
 
-  round++;
-  multiplier = 1.0;
-  isFlying = true;
-
-  io.emit("roundStart", { round });
-  io.emit("chatMessage", `🛫 Round ${round} started — flying...`);
-
-  const growth = setInterval(() => {
-    if (!isFlying) return clearInterval(growth);
-    multiplier += Math.random() * 0.1 + 0.02; // gradual growth
-
-    io.emit("roundUpdate", { multiplier });
-
-    // Random crash condition
-    if (multiplier >= Math.random() * 8 + 1) {
-      clearInterval(growth);
-      const crashPoint = parseFloat(multiplier.toFixed(2));
-      isFlying = false;
-
-      io.emit("roundEnd", { round, crashPoint });
-      io.emit("chatMessage", `💥 Round ${round} crashed at ${crashPoint}x`);
-      history.push({ round, crashPoint });
-      if (history.length > 50) history.shift();
-
-      setTimeout(startRound, 4000); // wait 4s before next round
-    }
-  }, 300);
-}
-
-startRound();
-
-// ============= START SERVER =============
-const PORT = process.env.PORT || 3000;
+// --- Start Server ---
 server.listen(PORT, () => {
   console.log(`🚀 FlyWithObed Aviator API running on port ${PORT}`);
 });
+
