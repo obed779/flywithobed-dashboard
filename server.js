@@ -1,5 +1,4 @@
 
-// server.js
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
@@ -10,24 +9,23 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 10000;
 
-// Serve static files from /public
+// Serve static files
 app.use(express.static("public"));
 
-// Fallback route to serve index.html
+// Serve main page
 app.get("/", (req, res) => {
   res.sendFile(process.cwd() + "/public/index.html");
 });
 
-// Game logic
 let multiplier = 1.0;
 let crashPoint = 1.0;
 
 function startRound() {
-  crashPoint = (Math.random() * 9 + 1).toFixed(2);
+  crashPoint = Number((Math.random() * 9 + 1).toFixed(2));
   console.log(`🛫 New round started! Crash point: ${crashPoint}x`);
 
   let interval = setInterval(() => {
-    multiplier = (multiplier + 0.05).toFixed(2);
+    multiplier = Number((multiplier + 0.05).toFixed(2)); // ✅ fixed line
     io.emit("multiplier", multiplier);
 
     if (multiplier >= crashPoint) {
@@ -51,7 +49,3 @@ server.listen(PORT, () => {
   console.log(`✅ FlyWithObed Aviator Game API is live and running on port ${PORT}`);
   startRound();
 });
-
-
-
-
