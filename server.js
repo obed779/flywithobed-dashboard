@@ -1,182 +1,121 @@
 
-// server.js
-import express from "express";
-import http from "http";
-import { Server } from "socket.io";
-import cors from "cors";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+// ===============================
+// ✈️ FlyWithObed Aviator Backend
+// ===============================
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
 
-// Setup express and paths
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // allow dashboard connection
+  },
+});
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+let round = 0;
+let isFlying = false;
+let multiplier = 1.0;
+let playerBalances = { A: 1000, B: 1000 };
+let history = [];
+
+// Serve base API message
+app.get("/", (req, res) => {
+  res.send("✅ FlyWithObed Aviator Game API is live and running!");
 });
 
-const PORT = process.env.PORT || 10000;
-const HISTORY_FILE = path.join(__dirname, "history.json");
+// ============= SOCKET HANDLING =============
+io.on("connection", (socket) => {
+  console.log("🟢 Player connected:", socket.id);
 
-// Load history
-let history = [];
-try {
-  if (fs.existsSync(HISTORY_FILE)) {
-    const data = fs.readFileSync(HISTORY_FILE, "utf8");
-    history = JSON.parse(data) || [];
-  }
-} catch (err) {
-  console.error("⚠️ Error reading history:", err);
-}
+  // Send initialization data
+  socket.emit("balanceUpdate", { player: "A", balance: playerBalances.A });
+  socket.emit("balanceUpdate", { player: "B", balance: playerBalances.B });
 
-// Save history
-function saveHistory() {
-  try {
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
-  } catch (err) {
-    console.error("⚠️ Error saving history:", err);
-  }
-}
-
-// Player setup
-let players = {
-  A: { name: "Player A", balance: 1000, bet: 0, cashoutPoint: null, hasCashedOut: false },
-  B: { name: "Player B", balance: 1000, bet: 0, cashoutPoint: null, hasCashedOut: false },
-};
-
-let currentRound = 0;
-let currentCrashPoint = 0;
-let isRunning = false;
-
-// Generate a random bet for simulation
-function randomBet(player) {
-  const betAmount = Math.floor(Math.random() * 50) + 10; // $10–$60
-  const cashout = (Math.random() * 3 + 1.1).toFixed(2); // 1.1x–4.1x
-  if (player.balance >= betAmount) {
-    player.bet = betAmount;
-    player.cashoutPoint = parseFloat(cashout);
-    player.balance -= betAmount;
-    player.hasCashedOut = false;
-    return true;
-  }
-  return false;
-}
-
-// Start new round
-function startNewRound() {
-  if (isRunning) return;
-  isRunning = true;
-  currentRound++;
-
-  // Random crash point
-  currentCrashPoint = (Math.random() * 9 + 1.01).toFixed(2);
-  console.log(`🛫 Round ${currentRound} started (crash at ${currentCrashPoint}x)`);
-
-  // Simulate random bets
-  const aBet = randomBet(players.A);
-  const bBet = randomBet(players.B);
-
-  io.emit("roundStart", {
-    round: currentRound,
-    crashPoint: parseFloat(currentCrashPoint),
-    players
+  // Send past history
+  history.slice(-10).forEach((h) => {
+    socket.emit("roundEnd", h);
   });
 
-  const flightDuration = Math.min(currentCrashPoint * 1000, 15000);
-  const startTime = Date.now();
+  // Chat message handler
+  socket.on("chatMessage", (msg) => {
+    const fullMsg = `💬 ${socket.id.slice(0, 4)}: ${msg}`;
+    io.emit("chatMessage", fullMsg);
+  });
 
-  const flight = setInterval(() => {
-    const elapsed = (Date.now() - startTime) / 1000;
-    const multiplier = Math.min(1 + elapsed, parseFloat(currentCrashPoint));
+  // Betting
+  socket.on("bet", (data) => {
+    const { player, amount } = data;
+    if (!isFlying && playerBalances[player] >= amount) {
+      playerBalances[player] -= amount;
+      io.emit("balanceUpdate", { player, balance: playerBalances[player] });
+      io.emit("chatMessage", `🎲 Player ${player} bet $${amount}`);
+      socket.data.bet = { player, amount, active: true, cashout: null };
+    }
+  });
 
-    // Handle auto-cashouts
-    Object.values(players).forEach(player => {
-      if (!player.hasCashedOut && player.bet > 0 && multiplier >= player.cashoutPoint) {
-        const win = (player.bet * player.cashoutPoint).toFixed(2);
-        player.balance += parseFloat(win);
-        player.hasCashedOut = true;
-        io.emit("playerCashout", {
-          player: player.name,
-          win,
-          cashout: player.cashoutPoint,
-        });
-        console.log(`💰 ${player.name} cashed out at ${player.cashoutPoint}x, win $${win}`);
-      }
-    });
-  }, 100);
+  // Cashout
+  socket.on("cashout", (data) => {
+    const { player } = data;
+    if (isFlying && socket.data.bet && socket.data.bet.active) {
+      const win = socket.data.bet.amount * multiplier;
+      playerBalances[player] += win;
+      socket.data.bet.active = false;
+      io.emit("balanceUpdate", { player, balance: playerBalances[player] });
+      io.emit(
+        "chatMessage",
+        `💰 Player ${player} cashed out at ${multiplier.toFixed(2)}x and won $${win.toFixed(2)}`
+      );
+    }
+  });
 
-  // Round end
-  setTimeout(() => {
-    clearInterval(flight);
-    console.log(`💥 Crashed at ${currentCrashPoint}x`);
-
-    // Handle uncashed players
-    Object.values(players).forEach(player => {
-      if (!player.hasCashedOut && player.bet > 0) {
-        player.bet = 0; // lost
-      }
-    });
-
-    // Save to history
-    history.unshift({
-      round: currentRound,
-      crashPoint: parseFloat(currentCrashPoint),
-      A: players.A.balance,
-      B: players.B.balance
-    });
-    if (history.length > 50) history.pop();
-    saveHistory();
-
-    io.emit("roundCrash", {
-      round: currentRound,
-      crashPoint: parseFloat(currentCrashPoint),
-      players,
-    });
-
-    // Reset bets
-    players.A.bet = 0;
-    players.B.bet = 0;
-
-    isRunning = false;
-    setTimeout(startNewRound, 3000);
-  }, flightDuration);
-}
-
-// Routes
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "dashboard.html")));
-app.get("/history", (req, res) => res.json(history));
-
-// Start server
-server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log("///////////////////////////////////////////////////////////");
-  console.log(`🌍 Live at https://flywithobed-skyhigh.onrender.com`);
-  console.log("///////////////////////////////////////////////////////////");
-  startNewRound();
+  socket.on("disconnect", () => {
+    console.log("🔴 Player disconnected:", socket.id);
+  });
 });
 
-// Sockets
-io.on("connection", (socket) => {
-  console.log("🟢 New player connected");
+// ============= GAME LOOP =============
+function startRound() {
+  if (isFlying) return;
 
-  // Send live status + balances
-  socket.emit("historyData", history);
-  socket.emit("playersData", players);
+  round++;
+  multiplier = 1.0;
+  isFlying = true;
 
-  if (isRunning) {
-    socket.emit("roundStart", {
-      round: currentRound,
-      crashPoint: parseFloat(currentCrashPoint),
-      players,
-    });
-  }
+  io.emit("roundStart", { round });
+  io.emit("chatMessage", `🛫 Round ${round} started — flying...`);
 
-  socket.on("disconnect", () => console.log("🔴 Player disconnected"));
+  const growth = setInterval(() => {
+    if (!isFlying) return clearInterval(growth);
+    multiplier += Math.random() * 0.1 + 0.02; // gradual growth
+
+    io.emit("roundUpdate", { multiplier });
+
+    // Random crash condition
+    if (multiplier >= Math.random() * 8 + 1) {
+      clearInterval(growth);
+      const crashPoint = parseFloat(multiplier.toFixed(2));
+      isFlying = false;
+
+      io.emit("roundEnd", { round, crashPoint });
+      io.emit("chatMessage", `💥 Round ${round} crashed at ${crashPoint}x`);
+      history.push({ round, crashPoint });
+      if (history.length > 50) history.shift();
+
+      setTimeout(startRound, 4000); // wait 4s before next round
+    }
+  }, 300);
+}
+
+startRound();
+
+// ============= START SERVER =============
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🚀 FlyWithObed Aviator API running on port ${PORT}`);
 });
