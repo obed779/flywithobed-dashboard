@@ -2,81 +2,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>FlyWithObed Live Aviator Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: "Poppins", sans-serif;
-      background: #0b1120;
-      color: #fff;
-      text-align: center;
-      margin: 0;
-    }
-    header {
-      background: #1e293b;
-      padding: 1rem;
-      font-size: 1.4rem;
-      font-weight: 600;
-    }
-    .plane { font-size: 3rem; transition: transform 0.1s linear; }
-    .multiplier { font-size: 2rem; color: #22d3ee; margin: 1rem; }
-    .crashed { color: #ef4444; }
-    table { margin: 1rem auto; width: 80%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid #334155; padding: 6px 10px; }
-    th { background: #1e293b; }
+    body { font-family: Arial; background: #0a0a1a; color: white; text-align: center; padding: 50px; }
+    h1 { color: #00ffcc; }
+    #multiplier { font-size: 48px; margin-top: 20px; }
   </style>
 </head>
 <body>
-  <header>✈️ FlyWithObed Live Aviator Dashboard</header>
-  <div id="plane">🛩️</div>
-  <div id="multiplier">1.00x</div>
-  <div id="status">Waiting for next round...</div>
-
-  <h3>📈 History</h3>
-  <table>
-    <thead><tr><th>Round</th><th>Crash</th></tr></thead>
-    <tbody id="history"></tbody>
-  </table>
-
+  <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
+  <div id="multiplier">Waiting...</div>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     const socket = io();
-    const plane = document.getElementById("plane");
-    const multiplierEl = document.getElementById("multiplier");
-    const statusEl = document.getElementById("status");
-    const historyEl = document.getElementById("history");
+    const multiplierDisplay = document.getElementById("multiplier");
 
-    let x = 0, frame;
-
-    function fly() {
-      x += 3;
-      plane.style.transform = `translateX(${x}px)`;
-      frame = requestAnimationFrame(fly);
-    }
-
-    socket.on("roundStart", () => {
-      cancelAnimationFrame(frame);
-      x = 0;
-      plane.textContent = "🛫";
-      statusEl.textContent = "🚀 Flying...";
-      multiplierEl.textContent = "1.00x";
-      plane.classList.remove("crashed");
-      fly();
+    socket.on("multiplierUpdate", (data) => {
+      multiplierDisplay.textContent = data.multiplier + "x";
     });
 
-    socket.on("multiplierUpdate", d => {
-      multiplierEl.textContent = `${d.multiplier.toFixed(2)}x`;
+    socket.on("roundEnded", (data) => {
+      multiplierDisplay.textContent = "💥 Crashed at " + data.crashPoint + "x";
     });
 
-    socket.on("roundEnd", d => {
-      cancelAnimationFrame(frame);
-      plane.textContent = "💥";
-      plane.classList.add("crashed");
-      statusEl.textContent = `💥 Crashed at ${d.crashPoint}x`;
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${historyEl.rows.length + 1}</td><td>${d.crashPoint}x</td>`;
-      historyEl.prepend(tr);
+    socket.on("roundStarted", (data) => {
+      multiplierDisplay.textContent = "🛫 Flying...";
     });
   </script>
 </body>
