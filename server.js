@@ -1,28 +1,25 @@
 
-
 const express = require("express");
 const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Serve static files from "public"
+// Serve static files (like CSS, JS, images)
 app.use(express.static(path.join(__dirname, "public")));
 
-// Route to dashboard.html
+// Serve the main dashboard file (index.html)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "dashboard.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Start the Aviator game simulation
+// Simple Aviator logic simulation (optional)
 let round = 1;
-function startRound() {
-  const crashPoint = (Math.random() * 10 + 1).toFixed(2);
-  console.log(`🛫 Round ${round} started (crash at ${crashPoint}x)`);
+setInterval(() => {
+  const crash = (Math.random() * 10).toFixed(2);
+  console.log(`🛫 Round ${round} started (crash at ${crash}x)`);
+  setTimeout(() => console.log(`💥 Crashed at ${crash}x`), 3000);
   round++;
-}
-setInterval(startRound, 10000); // simulate every 10 seconds
+}, 7000);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
