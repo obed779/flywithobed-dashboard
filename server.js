@@ -12,30 +12,22 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-let crashPoint = 1.0;
-
-// Serve all frontend files from /public
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Live Aviator simulation
+let crashPoint = 1.0;
 setInterval(() => {
   crashPoint = (Math.random() * 10 + 1).toFixed(2);
-  console.log(`🛫 Round started. Crash at ${crashPoint}x`);
   io.emit("multiplier", crashPoint);
+  console.log(`🛫 Round started at ${crashPoint}x`);
 }, 5000);
 
-// Handle socket connections
 io.on("connection", (socket) => {
-  console.log("🧑‍✈️ Player connected:", socket.id);
+  console.log("🧑‍✈️ Player connected", socket.id);
   socket.emit("multiplier", crashPoint);
-
-  socket.on("disconnect", () => {
-    console.log("👋 Player disconnected:", socket.id);
-  });
 });
 
 const PORT = process.env.PORT || 10000;
