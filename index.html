@@ -7,38 +7,129 @@
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Segoe UI", Arial, sans-serif;
       background-color: #0d1117;
       color: #ffffff;
-      text-align: center;
-      padding-top: 50px;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
     }
+
+    header {
+      background: #161b22;
+      width: 100%;
+      text-align: center;
+      padding: 20px 0;
+      box-shadow: 0 0 20px #00ffcc33;
+    }
+
     h1 {
       color: #00ffcc;
-      font-size: 2em;
+      margin: 0;
+      font-size: 1.8em;
     }
-    .log {
-      margin-top: 20px;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
+
+    .status {
+      font-size: 1.1em;
+      margin-top: 8px;
+      color: #c9d1d9;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      max-width: 800px;
+      padding: 20px;
+    }
+
+    .plane {
+      font-size: 60px;
+      margin: 20px 0;
+      transition: transform 0.5s ease-in-out;
+    }
+
+    .round-info {
       background: #161b22;
       border-radius: 10px;
       padding: 20px;
+      width: 100%;
+      box-shadow: 0 0 10px #00ffcc22;
       text-align: left;
+    }
+
+    .round-info h2 {
+      color: #00ffcc;
+      margin-bottom: 10px;
+      font-size: 1.2em;
+    }
+
+    .log {
+      margin-top: 20px;
+      width: 100%;
+      background: #0b0f14;
+      border-radius: 10px;
+      padding: 15px;
       overflow-y: auto;
-      height: 300px;
-      box-shadow: 0 0 10px #00ffcc33;
+      height: 250px;
+      box-shadow: inset 0 0 10px #00ffcc22;
+    }
+
+    .log p {
+      margin: 6px 0;
+      font-size: 0.95em;
+      color: #e6edf3;
+    }
+
+    footer {
+      background: #161b22;
+      color: #8b949e;
+      font-size: 0.9em;
+      width: 100%;
+      text-align: center;
+      padding: 10px 0;
+      margin-top: auto;
     }
   </style>
 </head>
+
 <body>
-  <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <p>Connecting to Aviator Live...</p>
-  <div class="log" id="log"></div>
+  <header>
+    <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
+    <p class="status" id="status">Connecting to Aviator Live...</p>
+  </header>
+
+  <main>
+    <div class="plane" id="plane">🛩️</div>
+
+    <div class="round-info">
+      <h2>🎮 Game Status</h2>
+      <p><strong>Round:</strong> <span id="round">-</span></p>
+      <p><strong>Multiplier:</strong> <span id="multiplier">-</span>x</p>
+      <p><strong>Status:</strong> <span id="crash">Waiting...</span></p>
+    </div>
+
+    <div class="log" id="log"></div>
+  </main>
+
+  <footer>
+    ✅ Connected to FlyWithObed Aviator API — Powered by Render
+  </footer>
 
   <script>
     const logDiv = document.getElementById("log");
+    const plane = document.getElementById("plane");
+    const status = document.getElementById("status");
+    const roundSpan = document.getElementById("round");
+    const multiplierSpan = document.getElementById("multiplier");
+    const crashSpan = document.getElementById("crash");
+
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const ws = new WebSocket(`${protocol}://${window.location.host}`);
 
@@ -49,11 +140,20 @@
       logDiv.scrollTop = logDiv.scrollHeight;
     }
 
-    ws.onopen = () => addLog("✅ Connected to FlyWithObed Aviator API");
-    ws.onmessage = (event) => addLog(event.data);
-    ws.onerror = (err) => addLog("❌ Connection error");
-  </script>
-</body>
-</html>
+    ws.onopen = () => {
+      status.textContent = "✅ Connected to Aviator Live";
+      addLog("✅ Connected to FlyWithObed Aviator API");
+    };
 
+    ws.onmessage = (event) => {
+      const msg = event.data;
+      addLog(msg);
 
+      // interpret message
+      if (msg.includes("Round")) {
+        const roundMatch = msg.match(/Round (\d+)/);
+        const targetMatch = msg.match(/target ([\d.]+)x/);
+        if (roundMatch) roundSpan.textContent = roundMatch[1];
+        if (targetMatch) multiplierSpan.textContent = targetMatch[1];
+        crashSpan.textContent = "🟢 Running...";
+        pla
