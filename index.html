@@ -6,10 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: "Poppins", sans-serif;
-      background: radial-gradient(circle at top, #002233, #000);
+      background: radial-gradient(circle at top, #001122, #000);
       color: #fff;
       text-align: center;
       margin: 0;
@@ -45,6 +46,15 @@
       transform: translateX(-50%);
       font-size: 2.5em;
       transition: transform 0.1s linear;
+    }
+
+    #chartContainer {
+      width: 90%;
+      margin: 0 auto;
+      background: rgba(0, 20, 40, 0.8);
+      border-radius: 10px;
+      padding: 10px;
+      border: 2px solid #00ccff;
     }
 
     .players {
@@ -124,6 +134,10 @@
     <div class="plane">🛩️</div>
   </div>
 
+  <div id="chartContainer">
+    <canvas id="multiplierChart" height="100"></canvas>
+  </div>
+
   <div class="players">
     <div class="player">
       <h3>👨‍✈️ Player A</h3>
@@ -170,6 +184,35 @@
     let currentMultiplier = 1.00;
     let flightInterval;
 
+    // Chart setup
+    const ctx = document.getElementById("multiplierChart").getContext("2d");
+    const chartData = {
+      labels: [],
+      datasets: [{
+        label: "Multiplier (x)",
+        data: [],
+        borderColor: "#00ccff",
+        borderWidth: 2,
+        fill: false,
+        tension: 0.2,
+      }]
+    };
+    const multiplierChart = new Chart(ctx, {
+      type: "line",
+      data: chartData,
+      options: {
+        scales: {
+          x: { display: false },
+          y: {
+            beginAtZero: true,
+            ticks: { color: "#00ccff" }
+          }
+        },
+        plugins: { legend: { labels: { color: "#00ccff" } } },
+        animation: false
+      }
+    });
+
     socket.on("connect", () => {
       statusEl.textContent = "✅ Connected to FlyWithObed Live Aviator!";
       statusEl.style.color = "#00ff99";
@@ -185,7 +228,9 @@
       statusEl.textContent = `🛫 Round ${roundCount} started! Plane climbing...`;
       statusEl.style.color = "#ffcc00";
       currentMultiplier = 1.00;
-
+      chartData.labels = [];
+      chartData.datasets[0].data = [];
+      multiplierChart.update();
       clearInterval(flightInterval);
       startPlaneFlight(data.crashPoint);
     });
@@ -222,6 +267,11 @@
         statusEl.textContent = `🛫 Flying... ${currentMultiplier.toFixed(2)}x`;
         planeEl.style.transform = `translateY(-${currentMultiplier * 3}px)`;
 
+        // Update chart
+        chartData.labels.push(time / 1000 + "s");
+        chartData.datasets[0].data.push(currentMultiplier);
+        multiplierChart.update();
+
         if (currentMultiplier >= crashPoint) clearInterval(flightInterval);
       }, 100);
     }
@@ -255,4 +305,3 @@
   </script>
 </body>
 </html>
-
