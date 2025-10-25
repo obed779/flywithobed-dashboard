@@ -8,100 +8,150 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Setup Express and paths
+// Setup express and paths
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Allow all CORS (for browser sockets)
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); // serve dashboard.html and assets
+app.use(express.static(__dirname));
 
-// Create server and socket
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 const PORT = process.env.PORT || 10000;
 const HISTORY_FILE = path.join(__dirname, "history.json");
 
-// Load existing history from file
+// Load history
 let history = [];
 try {
   if (fs.existsSync(HISTORY_FILE)) {
-    const data = fs.readFileSync(HISTORY_FILE, "utf-8");
+    const data = fs.readFileSync(HISTORY_FILE, "utf8");
     history = JSON.parse(data) || [];
   }
 } catch (err) {
-  console.error("⚠️ Failed to load history file:", err);
+  console.error("⚠️ Error reading history:", err);
 }
 
-// Function to save history to file
+// Save history
 function saveHistory() {
   try {
     fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
   } catch (err) {
-    console.error("⚠️ Failed to save history:", err);
+    console.error("⚠️ Error saving history:", err);
   }
 }
+
+// Player setup
+let players = {
+  A: { name: "Player A", balance: 1000, bet: 0, cashoutPoint: null, hasCashedOut: false },
+  B: { name: "Player B", balance: 1000, bet: 0, cashoutPoint: null, hasCashedOut: false },
+};
 
 let currentRound = 0;
 let currentCrashPoint = 0;
 let isRunning = false;
 
-// Start a new round
+// Generate a random bet for simulation
+function randomBet(player) {
+  const betAmount = Math.floor(Math.random() * 50) + 10; // $10–$60
+  const cashout = (Math.random() * 3 + 1.1).toFixed(2); // 1.1x–4.1x
+  if (player.balance >= betAmount) {
+    player.bet = betAmount;
+    player.cashoutPoint = parseFloat(cashout);
+    player.balance -= betAmount;
+    player.hasCashedOut = false;
+    return true;
+  }
+  return false;
+}
+
+// Start new round
 function startNewRound() {
   if (isRunning) return;
   isRunning = true;
   currentRound++;
 
-  // Random crash point between 1.01x and 10x
+  // Random crash point
   currentCrashPoint = (Math.random() * 9 + 1.01).toFixed(2);
-
   console.log(`🛫 Round ${currentRound} started (crash at ${currentCrashPoint}x)`);
+
+  // Simulate random bets
+  const aBet = randomBet(players.A);
+  const bBet = randomBet(players.B);
 
   io.emit("roundStart", {
     round: currentRound,
-    crashPoint: parseFloat(currentCrashPoint)
+    crashPoint: parseFloat(currentCrashPoint),
+    players
   });
 
-  // Simulate duration of flight (max 15 seconds)
   const flightDuration = Math.min(currentCrashPoint * 1000, 15000);
+  const startTime = Date.now();
 
+  const flight = setInterval(() => {
+    const elapsed = (Date.now() - startTime) / 1000;
+    const multiplier = Math.min(1 + elapsed, parseFloat(currentCrashPoint));
+
+    // Handle auto-cashouts
+    Object.values(players).forEach(player => {
+      if (!player.hasCashedOut && player.bet > 0 && multiplier >= player.cashoutPoint) {
+        const win = (player.bet * player.cashoutPoint).toFixed(2);
+        player.balance += parseFloat(win);
+        player.hasCashedOut = true;
+        io.emit("playerCashout", {
+          player: player.name,
+          win,
+          cashout: player.cashoutPoint,
+        });
+        console.log(`💰 ${player.name} cashed out at ${player.cashoutPoint}x, win $${win}`);
+      }
+    });
+  }, 100);
+
+  // Round end
   setTimeout(() => {
+    clearInterval(flight);
     console.log(`💥 Crashed at ${currentCrashPoint}x`);
-    io.emit("roundCrash", {
-      round: currentRound,
-      crashPoint: parseFloat(currentCrashPoint)
+
+    // Handle uncashed players
+    Object.values(players).forEach(player => {
+      if (!player.hasCashedOut && player.bet > 0) {
+        player.bet = 0; // lost
+      }
     });
 
-    // Save to history file
+    // Save to history
     history.unshift({
       round: currentRound,
-      crashPoint: parseFloat(currentCrashPoint)
+      crashPoint: parseFloat(currentCrashPoint),
+      A: players.A.balance,
+      B: players.B.balance
     });
     if (history.length > 50) history.pop();
     saveHistory();
+
+    io.emit("roundCrash", {
+      round: currentRound,
+      crashPoint: parseFloat(currentCrashPoint),
+      players,
+    });
+
+    // Reset bets
+    players.A.bet = 0;
+    players.B.bet = 0;
 
     isRunning = false;
     setTimeout(startNewRound, 3000);
   }, flightDuration);
 }
 
-// Route: Serve dashboard
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "dashboard.html"));
-});
-
-// Route: Serve history as JSON
-app.get("/history", (req, res) => {
-  res.json(history);
-});
+// Routes
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "dashboard.html")));
+app.get("/history", (req, res) => res.json(history));
 
 // Start server
 server.listen(PORT, () => {
@@ -112,22 +162,21 @@ server.listen(PORT, () => {
   startNewRound();
 });
 
-// Handle socket connections
+// Sockets
 io.on("connection", (socket) => {
   console.log("🟢 New player connected");
 
-  // Send current round status
+  // Send live status + balances
+  socket.emit("historyData", history);
+  socket.emit("playersData", players);
+
   if (isRunning) {
     socket.emit("roundStart", {
       round: currentRound,
-      crashPoint: parseFloat(currentCrashPoint)
+      crashPoint: parseFloat(currentCrashPoint),
+      players,
     });
   }
 
-  // Send history data
-  socket.emit("historyData", history);
-
-  socket.on("disconnect", () => {
-    console.log("🔴 Player disconnected");
-  });
+  socket.on("disconnect", () => console.log("🔴 Player disconnected"));
 });
