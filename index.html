@@ -5,221 +5,146 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #00283a, #000814);
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
-
-    h1 {
-      font-size: 30px;
-      margin-bottom: 15px;
-      color: #00eaff;
-    }
-
-    .plane {
-      font-size: 60px;
-      margin: 10px 0;
-      animation: fly 3s infinite ease-in-out;
-    }
-
-    @keyframes fly {
-      0% { transform: translateX(-50px); opacity: 0.7; }
-      50% { transform: translateX(50px); opacity: 1; }
-      100% { transform: translateX(-50px); opacity: 0.7; }
-    }
-
-    #status {
-      font-size: 22px;
-      margin-bottom: 10px;
-      color: #00eaff;
-    }
-
-    .players {
-      display: flex;
-      justify-content: center;
-      gap: 50px;
-      flex-wrap: wrap;
-      margin-top: 20px;
-    }
-
-    .player {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 15px;
-      border-radius: 12px;
-      width: 230px;
-      box-shadow: 0 0 10px rgba(0, 234, 255, 0.2);
-    }
-
-    .player h3 {
-      margin-top: 0;
-    }
-
-    .cashout {
-      color: #00ff88;
-      font-weight: bold;
-    }
-
-    .crash {
-      color: #ff4444;
-      font-weight: bold;
-    }
-
-    .history {
-      margin-top: 40px;
-    }
-
-    table {
-      width: 70%;
-      margin: 0 auto;
-      border-collapse: collapse;
-      color: white;
-    }
-
-    th, td {
-      padding: 8px;
-      border: 1px solid #00eaff;
-    }
-
-    .footer {
-      margin-top: 25px;
-      font-size: 14px;
-      color: #bbb;
-    }
-
-    #multiplier {
-      font-size: 24px;
-      font-weight: bold;
-      color: #00ffdd;
-    }
-
-    .chart-container {
-      margin: 30px auto;
-      width: 80%;
-      max-width: 600px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 15px;
-      border-radius: 10px;
-    }
-
-    canvas {
-      width: 100%;
-      height: 300px;
-    }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
-<body>
-  <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="status">Connecting...</div>
-  <div class="plane">🛩️</div>
-  <div id="multiplier">1.00x</div>
+<body class="bg-gray-900 text-white font-sans">
 
-  <div class="chart-container">
-    <canvas id="flightChart"></canvas>
-  </div>
-
-  <div class="players">
-    <div class="player">
-      <h3>👨‍✈️ Player A</h3>
-      <p>Balance: $<span id="balanceA">1000</span></p>
-      <p>Bet: <span id="betA">-</span></p>
-      <p>Cashout: <span id="cashA">-</span></p>
-      <p id="resultA"></p>
+  <div class="grid grid-cols-5 grid-rows-[auto_1fr_auto] h-screen gap-3 p-4">
+    
+    <!-- Left: History -->
+    <div class="col-span-1 bg-gray-800 rounded-2xl p-4 overflow-y-auto">
+      <h2 class="text-lg font-bold mb-3">📈 History</h2>
+      <ul id="history" class="space-y-2 text-sm"></ul>
     </div>
 
-    <div class="player">
-      <h3>🧑‍✈️ Player B</h3>
-      <p>Balance: $<span id="balanceB">1000</span></p>
-      <p>Bet: <span id="betB">-</span></p>
-      <p>Cashout: <span id="cashB">-</span></p>
-      <p id="resultB"></p>
+    <!-- Center: Flight + Chat -->
+    <div class="col-span-3 bg-gray-800 rounded-2xl p-4 flex flex-col items-center justify-between">
+      <div class="text-center">
+        <h1 class="text-2xl font-bold">✈️ FlyWithObed Aviator</h1>
+        <p id="round" class="text-gray-400 mt-1">Waiting for next round...</p>
+      </div>
+
+      <!-- Plane Animation -->
+      <div id="plane" class="text-6xl mt-10 transition-transform duration-500">🛩️</div>
+      <p id="multiplier" class="text-3xl font-bold mt-4 text-green-400">1.00x</p>
+
+      <!-- Live Chat -->
+      <div class="w-full bg-gray-700 p-2 rounded-lg mt-8 flex-1 flex flex-col">
+        <div id="chat-box" class="flex-1 overflow-y-auto text-sm space-y-1 mb-2"></div>
+        <div class="flex">
+          <input id="chat-input" class="flex-1 p-2 bg-gray-800 rounded-l-lg outline-none" placeholder="Type message..." />
+          <button id="send-chat" class="bg-blue-600 px-4 rounded-r-lg">Send</button>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="history">
-    <h3>📈 History</h3>
-    <table id="historyTable">
-      <thead>
-        <tr>
-          <th>Round</th>
-          <th>Crash Point</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+    <!-- Right: Balances -->
+    <div class="col-span-1 bg-gray-800 rounded-2xl p-4">
+      <h2 class="text-lg font-bold mb-3">💰 Balances</h2>
+      <div class="mb-3">
+        👨‍✈️ <span class="font-semibold">Player A:</span>
+        <span id="balanceA">$1000.00</span>
+      </div>
+      <div>
+        🧑‍✈️ <span class="font-semibold">Player B:</span>
+        <span id="balanceB">$1000.00</span>
+      </div>
+    </div>
 
-  <div class="footer">
-    FlyWithObed © 2025 — Real-Time Aviator Simulation
+    <!-- Bottom: Betting Area -->
+    <div class="col-span-5 flex justify-around bg-gray-800 rounded-2xl p-4">
+      <div class="flex flex-col items-center space-y-2">
+        <h3 class="font-semibold">👨‍✈️ Player A</h3>
+        <input id="betA" type="number" placeholder="Bet amount" class="bg-gray-700 p-2 rounded text-center w-32" />
+        <button id="betA-btn" class="bg-green-600 px-4 py-1 rounded">Bet</button>
+        <button id="cashoutA-btn" class="bg-yellow-500 px-4 py-1 rounded">Cashout</button>
+      </div>
+
+      <div class="flex flex-col items-center space-y-2">
+        <h3 class="font-semibold">🧑‍✈️ Player B</h3>
+        <input id="betB" type="number" placeholder="Bet amount" class="bg-gray-700 p-2 rounded text-center w-32" />
+        <button id="betB-btn" class="bg-green-600 px-4 py-1 rounded">Bet</button>
+        <button id="cashoutB-btn" class="bg-yellow-500 px-4 py-1 rounded">Cashout</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    const socket = io();
-    const statusEl = document.getElementById("status");
+    const socket = io("https://obedaviator.onrender.com");
+
+    const plane = document.getElementById("plane");
     const multiplierEl = document.getElementById("multiplier");
+    const historyEl = document.getElementById("history");
+    const chatBox = document.getElementById("chat-box");
+    const chatInput = document.getElementById("chat-input");
+    const sendChat = document.getElementById("send-chat");
     const balanceA = document.getElementById("balanceA");
     const balanceB = document.getElementById("balanceB");
-    const betA = document.getElementById("betA");
-    const betB = document.getElementById("betB");
-    const cashA = document.getElementById("cashA");
-    const cashB = document.getElementById("cashB");
-    const resultA = document.getElementById("resultA");
-    const resultB = document.getElementById("resultB");
-    const historyTable = document.querySelector("#historyTable tbody");
+    const roundEl = document.getElementById("round");
 
-    let flyingInterval;
-    let currentMultiplier = 1.00;
-    let chart;
-    let chartData = { labels: [], data: [] };
+    let multiplier = 1.00;
+    let flying = false;
 
-    // Initialize Chart
-    function setupChart() {
-      const ctx = document.getElementById('flightChart').getContext('2d');
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: chartData.labels,
-          datasets: [{
-            label: 'Flight Multiplier',
-            data: chartData.data,
-            borderColor: '#00eaff',
-            tension: 0.3,
-            fill: false
-          }]
-        },
-        options: {
-          scales: {
-            x: { display: false },
-            y: { beginAtZero: true }
-          },
-          plugins: { legend: { display: false } }
-        }
-      });
-    }
-    setupChart();
-
-    // Update chart live
-    function updateChart(multiplier) {
-      chartData.labels.push("");
-      chartData.data.push(multiplier);
-      if (chartData.data.length > 50) {
-        chartData.data.shift();
-        chartData.labels.shift();
-      }
-      chart.update();
-    }
-
-    socket.on("connect", () => {
-      statusEl.textContent = "🟢 Connected to FlyWithObed Live Aviator!";
+    // --- SOCKET EVENTS ---
+    socket.on("connect", () => console.log("✅ Connected to Aviator Server"));
+    socket.on("roundStart", (data) => {
+      flying = true;
+      multiplier = 1.00;
+      roundEl.textContent = `🛫 Round ${data.round} started — flying...`;
+      plane.style.transform = "translateX(0px)";
+      multiplierEl.textContent = "1.00x";
     });
 
-    socket.on("historyData", (history) => {
-      historyTable.innerHTML = "";
-      history.forEach(h => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${h.round}</td><td>${h.cras
+    socket.on("roundUpdate", (data) => {
+      multiplier = data.multiplier;
+      multiplierEl.textContent = `${multiplier.toFixed(2)}x`;
+      plane.style.transform = `translateX(${multiplier * 20}px)`;
+    });
+
+    socket.on("roundEnd", (data) => {
+      flying = false;
+      multiplierEl.textContent = `💥 Crashed at ${data.crashPoint.toFixed(2)}x`;
+      plane.style.transform = "translateX(0px)";
+      const li = document.createElement("li");
+      li.textContent = `Round ${data.round}: ${data.crashPoint.toFixed(2)}x`;
+      historyEl.prepend(li);
+    });
+
+    socket.on("chatMessage", (msg) => {
+      const p = document.createElement("p");
+      p.textContent = msg;
+      chatBox.appendChild(p);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    sendChat.onclick = () => {
+      const msg = chatInput.value.trim();
+      if (!msg) return;
+      socket.emit("chatMessage", msg);
+      chatInput.value = "";
+    };
+
+    socket.on("balanceUpdate", (data) => {
+      if (data.player === "A") balanceA.textContent = `$${data.balance.toFixed(2)}`;
+      if (data.player === "B") balanceB.textContent = `$${data.balance.toFixed(2)}`;
+    });
+
+    // Bet & Cashout actions
+    document.getElementById("betA-btn").onclick = () => {
+      const amount = parseFloat(document.getElementById("betA").value);
+      if (amount > 0) socket.emit("bet", { player: "A", amount });
+    };
+    document.getElementById("cashoutA-btn").onclick = () => socket.emit("cashout", { player: "A" });
+
+    document.getElementById("betB-btn").onclick = () => {
+      const amount = parseFloat(document.getElementById("betB").value);
+      if (amount > 0) socket.emit("bet", { player: "B", amount });
+    };
+    document.getElementById("cashoutB-btn").onclick = () => socket.emit("cashout", { player: "B" });
+  </script>
+
+</body>
+</html>
+
+        
