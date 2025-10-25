@@ -102,7 +102,7 @@
       });
     });
 
-    socket.on("roundStart", (data) => {
+    socket.on("roundStart", () => {
       cancelAnimationFrame(animationFrame);
       position = 0;
       plane.textContent = "🛫";
@@ -132,3 +132,5 @@
   </script>
 </body>
 </html>
+
+ 
