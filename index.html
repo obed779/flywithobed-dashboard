@@ -1,19 +1,16 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-
-  <div id="dashboard">
-    <p id="status">Connecting...</p>
-    <div id="multiplier">---</div>
-    <div id="log"></div>
-  </div>
+  <p id="status">Connecting...</p>
+  <div id="multiplier">---</div>
+  <div id="log"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -29,7 +26,6 @@
 
     socket.on("multiplier", (value) => {
       multiplierEl.textContent = value + "x";
-      multiplierEl.style.color = "#ffcc00";
       logEl.textContent = "✈️ New round: " + value + "x";
     });
 
@@ -40,39 +36,9 @@
   </script>
 
   <style>
-    body {
-      background-color: #0a0a0a;
-      color: #00ff9c;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 60px;
-    }
-
-    h1 {
-      color: #fff;
-      font-size: 1.8rem;
-    }
-
-    #dashboard {
-      margin-top: 30px;
-    }
-
-    #status {
-      font-size: 1rem;
-      color: #999;
-      margin-bottom: 20px;
-    }
-
-    #multiplier {
-      font-size: 4rem;
-      color: #ffcc00;
-      margin-bottom: 20px;
-    }
-
-    #log {
-      color: #aaa;
-      font-size: 1.1rem;
-    }
+    body { background:#0a0a0a; color:#00ff9c; text-align:center; padding-top:60px; font-family:sans-serif; }
+    #multiplier { font-size:4rem; color:#ffcc00; }
+    #status { margin-bottom:20px; }
   </style>
 </body>
 </html>
