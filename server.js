@@ -10,27 +10,23 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" },
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 10000;
 
-// Serve static files
+// Serve dashboard + static assets
 app.use(express.static(path.join(__dirname, "public")));
 
-// Default route
 app.get("/", (req, res) => {
   res.send("✅ FlyWithObed Aviator Game API is live and running!");
 });
 
-// Game variables
 let currentMultiplier = 1.0;
 let crashPoint = randomCrash();
 let flying = false;
 
 function randomCrash() {
-  return (Math.random() * 9 + 1).toFixed(2); // 1.00x - 10.00x
+  return (Math.random() * 9 + 1).toFixed(2); // between 1x–10x
 }
 
 function startRound() {
