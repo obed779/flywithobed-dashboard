@@ -4,45 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #111;
-      color: #fff;
-    }
-    h1 { color: #00ffcc; }
-    .multiplier { font-size: 3em; margin: 20px; }
-    .crashed { color: red; }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="status">Connecting...</div>
-  <div class="multiplier" id="multiplier">1.00x</div>
-  <div id="crash"></div>
+  <div class="dashboard">
+    <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
+    <div id="status">Connecting...</div>
+    <div id="multiplier">1.00x</div>
+    <div id="plane">✈️</div>
+    <div id="history">
+      <h3>📈 Crash History</h3>
+      <ul id="historyList"></ul>
+    </div>
+  </div>
 
-  <script>
-    const socket = io();
-
-    socket.on("connected", (data) => {
-      document.getElementById("status").innerText = "🟢 Connected!";
-    });
-
-    socket.on("multiplierUpdate", (data) => {
-      document.getElementById("multiplier").innerText = data.multiplier + "x";
-      document.getElementById("multiplier").classList.remove("crashed");
-    });
-
-    socket.on("roundCrash", (data) => {
-      document.getElementById("multiplier").classList.add("crashed");
-      document.getElementById("crash").innerText = `💥 Crashed at ${data.multiplier}x`;
-    });
-
-    socket.on("roundStart", (data) => {
-      document.getElementById("crash").innerText = "";
-    });
-  </script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
