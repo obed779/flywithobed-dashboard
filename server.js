@@ -10,9 +10,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Serve all static files from /public and root
-app.use(express.static(path.join(__dirname, "public")));
+// Serve static files from root and /public
 app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Root route
 app.get("/", (req, res) => {
@@ -24,13 +24,13 @@ app.get("/dashboard.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
 
-// Example live message (for confirmation)
+// Health route
 app.get("/api/status", (req, res) => {
   res.json({ message: "✅ FlyWithObed Aviator Game API is live and running!" });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 FlyWithObed Aviator API running on port ${PORT}`);
 });
+
 
