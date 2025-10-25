@@ -2,35 +2,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
   <style>
-    body { background-color: #000; color: #00ff9c; text-align: center; font-family: Arial; padding-top: 50px; }
-    #multiplier { font-size: 4em; color: gold; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #101720;
+      color: #fff;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #ffcc00; }
+    #multiplier { font-size: 4rem; margin: 40px 0; }
+    .status { font-size: 1.2rem; color: #999; }
   </style>
 </head>
 <body>
   <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="status">Connecting...</div>
-  <div id="multiplier">---</div>
+  <div id="multiplier">Connecting...</div>
+  <div class="status">Waiting for game...</div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    const statusEl = document.getElementById('status');
-    const multiplierEl = document.getElementById('multiplier');
+    const multiplier = document.getElementById('multiplier');
+    const statusText = document.querySelector('.status');
 
-    socket.on('connect', () => {
-      statusEl.textContent = '✅ Connected to server';
+    socket.on('multiplier_update', (data) => {
+      multiplier.textContent = data + 'x';
+      statusText.textContent = 'Flying...';
     });
 
-    socket.on('multiplier', (value) => {
-      multiplierEl.textContent = value + 'x';
+    socket.on('game_crash', (data) => {
+      multiplier.textContent = data + 'x 💥';
+      statusText.textContent = 'Crashed! Waiting for next round...';
     });
 
-    socket.on('disconnect', () => {
-      statusEl.textContent = '❌ Disconnected';
+    socket.on('game_start', () => {
+      statusText.textContent = 'New round started!';
+      multiplier.textContent = '1.00x';
     });
   </script>
 </body>
