@@ -1,42 +1,47 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
-    body { font-family: Arial; background: #0b0d17; color: white; text-align: center; }
-    h1 { color: #ffcc00; }
-    #multiplier { font-size: 5em; margin: 20px; }
-    #status { font-size: 1.5em; margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #111;
+      color: #fff;
+    }
+    h1 { color: #00ffcc; }
+    .multiplier { font-size: 3em; margin: 20px; }
+    .crashed { color: red; }
   </style>
 </head>
 <body>
   <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="multiplier">Loading...</div>
   <div id="status">Connecting...</div>
+  <div class="multiplier" id="multiplier">1.00x</div>
+  <div id="crash"></div>
 
   <script>
-    const socket = io(window.location.origin);
-    const multiplier = document.getElementById("multiplier");
-    const status = document.getElementById("status");
+    const socket = io();
 
     socket.on("connected", (data) => {
-      status.textContent = data.message;
+      document.getElementById("status").innerText = "🟢 Connected!";
+    });
+
+    socket.on("multiplierUpdate", (data) => {
+      document.getElementById("multiplier").innerText = data.multiplier + "x";
+      document.getElementById("multiplier").classList.remove("crashed");
+    });
+
+    socket.on("roundCrash", (data) => {
+      document.getElementById("multiplier").classList.add("crashed");
+      document.getElementById("crash").innerText = `💥 Crashed at ${data.multiplier}x`;
     });
 
     socket.on("roundStart", (data) => {
-      status.textContent = `🛫 Flying! Crash at ${data.crashPoint}x`;
-      multiplier.textContent = "1.00x";
-    });
-
-    socket.on("multiplierUpdate", (value) => {
-      multiplier.textContent = `${value}x`;
-    });
-
-    socket.on("roundCrash", (crashPoint) => {
-      status.textContent = `💥 Crashed at ${crashPoint}x`;
+      document.getElementById("crash").innerText = "";
     });
   </script>
 </body>
