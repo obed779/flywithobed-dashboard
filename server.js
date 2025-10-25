@@ -1,66 +1,79 @@
 
+// server.js
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Setup paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Express + HTTP + Socket.io
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve static files
+const PORT = process.env.PORT || 10000;
+
+// Serve static dashboard
 app.use(express.static(path.join(__dirname, "public")));
 
-// Default route → dashboard
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
 
-// Aviator game state
-let round = 2049;
+// Game state variables
+let round = 0;
 let multiplier = 1.0;
+let crashPoint = 0;
 let inProgress = false;
-let crashPoint = 1.5;
 
-// Game loop
+// Start a round automatically
 function startRound() {
   round++;
   inProgress = true;
-  crashPoint = (Math.random() * 10 + 1).toFixed(2);
+  crashPoint = (Math.random() * 10 + 1).toFixed(2); // Random crash between 1x and 11x
   multiplier = 1.0;
 
+  console.log(`🟢 Round ${round} started (target ${crashPoint}x)`);
   io.emit("roundStart", { round, crashPoint });
 
   const interval = setInterval(() => {
-    multiplier = (multiplier + 0.05).toFixed(2);
+    multiplier = (parseFloat(multiplier) + 0.05).toFixed(2);
     io.emit("multiplierUpdate", { multiplier });
 
-    if (multiplier >= crashPoint) {
+    if (parseFloat(multiplier) >= parseFloat(crashPoint)) {
       clearInterval(interval);
       inProgress = false;
+      console.log(`💥 Round ${round} crashed at ${crashPoint}x`);
       io.emit("roundCrash", { round, crashPoint });
-      setTimeout(startRound, 3000); // 3s before next round
+      setTimeout(startRound, 3000); // start next round after 3s
     }
   }, 200);
 }
 
-// Socket.io connection
+// When a client connects
 io.on("connection", (socket) => {
-  console.log("🟢 New dashboard connected");
-  socket.emit("status", "Connected to FlyWithObed Aviator Live API");
+  console.log("🟢 A player connected");
+
+  socket.emit("welcome", {
+    message: "✅ FlyWithObed Aviator API is live and running!",
+  });
+
+  if (inProgress) {
+    socket.emit("roundStart", { round, crashPoint });
+    socket.emit("multiplierUpdate", { multiplier });
+  } else {
+    socket.emit("waiting", { message: "Waiting for next round..." });
+  }
+
+  socket.on("disconnect", () => {
+    console.log("🔴 A player disconnected");
+  });
 });
 
-// Start game
-startRound();
-
 // Start server
-const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
+  startRound();
 });
