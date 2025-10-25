@@ -8,21 +8,45 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Serve static files from "public" folder
 app.use(express.static(path.join(__dirname, "public")));
 
+// Route for main dashboard page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-let multiplier = 1.0;
+// Aviator live multiplier
+let currentMultiplier = 1.00;
+let gameRunning = false;
 
-setInterval(() => {
-  multiplier = (Math.random() * 10).toFixed(2);
-  io.emit("multiplier", multiplier);
-  console.log("🛫 Round started at " + multiplier + "x");
-}, 5000);
+function startRound() {
+  gameRunning = true;
+  currentMultiplier = 1.00;
+  io.emit("game_start");
 
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  const growth = setInterval(() => {
+    currentMultiplier += Math.random() * 0.2;
+    io.emit("multiplier_update", currentMultiplier.toFixed(2));
+
+    if (Math.random() < 0.02) {
+      clearInterval(growth);
+      gameRunning = false;
+      io.emit("game_crash", currentMultiplier.toFixed(2));
+
+      setTimeout(() => startRound(), 3000);
+    }
+  }, 200);
+}
+
+io.on("connection", (socket) => {
+  console.log("✅ Player connected");
+  socket.emit("multiplier_update", currentMultiplier.toFixed(2));
 });
+
+startRound();
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () =>
+  console.log(`✅ FlyWithObed Aviator Game API is live and running on port ${PORT}!`)
+);
