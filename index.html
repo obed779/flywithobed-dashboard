@@ -8,42 +8,35 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #101720;
-      color: #fff;
       text-align: center;
+      background-color: #0a0a23;
+      color: white;
       margin: 0;
       padding: 20px;
     }
-    h1 { color: #ffcc00; }
-    #multiplier { font-size: 4rem; margin: 40px 0; }
-    .status { font-size: 1.2rem; color: #999; }
+    .plane { font-size: 60px; }
+    .multiplier { font-size: 48px; margin-top: 20px; color: #00ffcc; }
   </style>
 </head>
 <body>
   <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="multiplier">Connecting...</div>
-  <div class="status">Waiting for game...</div>
+  <div class="plane">✈️</div>
+  <div id="multiplier" class="multiplier">Waiting...</div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    const multiplier = document.getElementById('multiplier');
-    const statusText = document.querySelector('.status');
+    const multiplierDisplay = document.getElementById("multiplier");
 
-    socket.on('multiplier_update', (data) => {
-      multiplier.textContent = data + 'x';
-      statusText.textContent = 'Flying...';
+    socket.on("message", (msg) => console.log(msg));
+    socket.on("multiplier", (value) => {
+      multiplierDisplay.innerText = value + "x";
     });
-
-    socket.on('game_crash', (data) => {
-      multiplier.textContent = data + 'x 💥';
-      statusText.textContent = 'Crashed! Waiting for next round...';
-    });
-
-    socket.on('game_start', () => {
-      statusText.textContent = 'New round started!';
-      multiplier.textContent = '1.00x';
+    socket.on("crash", (value) => {
+      multiplierDisplay.innerText = "💥 Crashed at " + value + "x";
+      setTimeout(() => multiplierDisplay.innerText = "Waiting...", 3000);
     });
   </script>
 </body>
 </html>
+
