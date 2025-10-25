@@ -1,13 +1,14 @@
 {
   "name": "flywithobed-dashboard",
   "version": "1.0.0",
+  "description": "FlyWithObed Aviator Live Dashboard",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
+    "express": "^4.18.2",
     "socket.io": "^4.7.2"
   }
 }
