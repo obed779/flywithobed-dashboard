@@ -4,85 +4,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>✈️ FlyWithObed Aviator Dashboard</title>
+  <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
-      background: #0a0f1a;
+      background: #020d1f;
       color: #fff;
-      font-family: 'Poppins', sans-serif;
-      margin: 0;
-      padding: 0;
+      font-family: "Segoe UI", sans-serif;
       display: flex;
       flex-direction: column;
+      align-items: center;
+      text-align: center;
       height: 100vh;
-    }
-
-    header {
-      background: #111827;
-      padding: 12px;
-      text-align: center;
-      font-size: 1.4rem;
-      font-weight: 600;
-      border-bottom: 2px solid #1f2937;
-    }
-
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 3fr 1fr;
-    }
-
-    .left {
-      padding: 20px;
-    }
-
-    .status {
-      background: #1f2937;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-
-    .status h2 {
       margin: 0;
-      font-size: 1.2rem;
-      color: #10b981;
+      padding: 20px;
     }
-
-    #plane {
-      font-size: 60px;
-      animation: fly 2s infinite linear;
-    }
-
-    @keyframes fly {
-      0% { transform: translateX(0px); }
-      50% { transform: translateX(20px); }
-      100% { transform: translateX(0px); }
-    }
-
-    .players, .history, .chat {
-      background: #111827;
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-    }
-
-    .players h3, .history h3, .chat h3 {
-      margin-top: 0;
-      border-bottom: 1px solid #1f2937;
-      padding-bottom: 5px;
-    }
-
-    .player {
-      margin-bottom: 10px;
-    }
-
-    .chat-box {
-      height: 200px;
+    h1 { color: #00eaff; margin-bottom: 0; }
+    .plane { font-size: 4rem; margin: 10px; transition: transform 0.2s ease-in-out; }
+    .status { font-size: 1.3rem; margin-top: 5px; color: #bbb; }
+    .multiplier { font-size: 2.5rem; font-weight: bold; color: #00ff99; margin-top: 10px; }
+    .history {
+      margin-top: 25px;
+      width: 80%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px;
       overflow-y: auto;
-      background: #1f2937;
-      border-radius: 8px;
-      paddin
+      max-height: 260px;
+    }
+    table { width: 100%; border-collapse: collapse; color: #fff; }
+    th, td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    th { color: #00eaff; }
+    .crashed { color: #ff4d4d; }
+    footer {
+      margin-top: 15px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
+  <div class="plane" id="plane">🛩️</div>
+  <div class="multiplier" id="multiplier">1.00x</div>
+  <div class="status" id="status">Connecting to live server...</div>
 
+  <div class="history">
+    <table>
+      <thead>
+        <tr><th>Round</th><th>Crash Point</th></tr>
+      </thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+
+  <footer>© 2025 FlyWithObed Aviator Live</footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
