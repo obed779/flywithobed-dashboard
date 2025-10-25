@@ -6,17 +6,13 @@ import { Server } from "socket.io";
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
-app.use(express.static("public")); // Serve files like dashboard.html
+app.use(express.static("public")); // serve dashboard.html and assets
 
 const PORT = process.env.PORT || 10000;
 
-// ============================
-// Aviator Game Simulation Logic
-// ============================
+// ========= Aviator Simulation =========
 let currentMultiplier = 1.0;
 let gameRunning = false;
 let crashPoint = 0;
@@ -35,7 +31,7 @@ function startRound() {
       clearInterval(interval);
       gameRunning = false;
       io.emit("roundEnd", { crashPoint });
-      console.log(`💥 Round crashed at ${crashPoint}x`);
+      console.log(`💥 Crashed at ${crashPoint}x`);
       setTimeout(startRound, 3000);
     } else {
       currentMultiplier += 0.01;
@@ -44,17 +40,14 @@ function startRound() {
   }, 100);
 }
 
-// Start first round automatically
 startRound();
 
-// WebSocket connection
 io.on("connection", (socket) => {
   console.log("🟢 Player connected:", socket.id);
   socket.emit("status", "✅ FlyWithObed Aviator Game API is live and running!");
   socket.on("disconnect", () => console.log("🔴 Player disconnected:", socket.id));
 });
 
-// Default route (optional message)
 app.get("/", (req, res) => {
   res.send("✅ FlyWithObed Aviator Game API is live and running!");
 });
@@ -62,3 +55,4 @@ app.get("/", (req, res) => {
 server.listen(PORT, () => {
   console.log(`🚀 FlyWithObed Aviator API running on port ${PORT}`);
 });
+
