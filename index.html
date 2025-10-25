@@ -3,71 +3,68 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     body {
       background: #0d1117;
-      color: #f0f6fc;
+      color: white;
       font-family: Arial, sans-serif;
       text-align: center;
-      padding: 30px;
+      padding: 20px;
     }
-    .plane { font-size: 3rem; }
-    .multiplier {
-      font-size: 2.5rem;
-      margin: 10px 0;
-      color: #58a6ff;
+    h1 { color: #00bcd4; }
+    #multiplier {
+      font-size: 3rem;
+      margin: 20px 0;
+      color: #00ff95;
     }
     table {
-      width: 60%;
-      margin: 30px auto;
+      margin: 0 auto;
       border-collapse: collapse;
+      width: 50%;
     }
     th, td {
-      border: 1px solid #30363d;
+      border: 1px solid #555;
       padding: 10px;
     }
-    th { background: #161b22; }
-    .crashed { color: #ff4d4d; }
-    .started { color: #4dff91; }
   </style>
 </head>
 <body>
   <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="status">Connecting to live server...</div>
-  <div class="plane">🛩️</div>
-  <div class="multiplier" id="multiplier">1.00x</div>
-
-  <h2>📈 History</h2>
-  <table id="history">
-    <tr><th>Round</th><th>Crash Point</th></tr>
+  <div id="status">🟢 Connecting...</div>
+  <div id="multiplier">🛩️ 1.00x</div>
+  <table>
+    <thead>
+      <tr><th>Round</th><th>Crash Point</th></tr>
+    </thead>
+    <tbody id="history"></tbody>
   </table>
 
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const socket = io();
+    const status = document.getElementById("status");
+    const multiplierDisplay = document.getElementById("multiplier");
+    const historyTable = document.getElementById("history");
 
-    socket.on("status", msg => {
-      document.getElementById("status").textContent = msg;
+    socket.on("welcome", () => {
+      status.textContent = "✅ Connected to live server";
     });
 
-    socket.on("roundStart", data => {
-      document.getElementById("status").innerHTML =
-        `🟢 Round ${data.round} started (target ${data.crashPoint}x)`;
-      document.getElementById("multiplier").textContent = "1.00x";
+    socket.on("roundStart", (data) => {
+      status.textContent = `🟢 Round ${data.round} started (target ${data.target}x)`;
+      multiplierDisplay.textContent = `🛩️ 1.00x`;
     });
 
-    socket.on("multiplierUpdate", data => {
-      document.getElementById("multiplier").textContent = `${data.multiplier}x`;
+    socket.on("multiplierUpdate", (data) => {
+      multiplierDisplay.textContent = `🛩️ ${data.multiplier.toFixed(2)}x`;
     });
 
-    socket.on("roundCrash", data => {
-      document.getElementById("status").innerHTML =
-        `💥 Round ${data.round} crashed at ${data.crashPoint}x`;
-      const table = document.getElementById("history");
-      const row = table.insertRow(1);
-      row.innerHTML = `<td>${data.round}</td><td class="crashed">${data.crashPoint}x</td>`;
+    socket.on("roundCrash", (data) => {
+      status.textContent = `💥 Round ${data.round} crashed at ${data.crashPoint}x`;
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${data.round}</td><td>${data.crashPoint}x</td>`;
+      historyTable.prepend(row);
     });
   </script>
 </body>
