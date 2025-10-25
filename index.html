@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -70,7 +71,7 @@
     }
 
     .history {
-      margin-top: 30px;
+      margin-top: 40px;
     }
 
     table {
@@ -96,6 +97,20 @@
       font-weight: bold;
       color: #00ffdd;
     }
+
+    .chart-container {
+      margin: 30px auto;
+      width: 80%;
+      max-width: 600px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 300px;
+    }
   </style>
 </head>
 <body>
@@ -103,6 +118,10 @@
   <div id="status">Connecting...</div>
   <div class="plane">🛩️</div>
   <div id="multiplier">1.00x</div>
+
+  <div class="chart-container">
+    <canvas id="flightChart"></canvas>
+  </div>
 
   <div class="players">
     <div class="player">
@@ -155,6 +174,45 @@
 
     let flyingInterval;
     let currentMultiplier = 1.00;
+    let chart;
+    let chartData = { labels: [], data: [] };
+
+    // Initialize Chart
+    function setupChart() {
+      const ctx = document.getElementById('flightChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Flight Multiplier',
+            data: chartData.data,
+            borderColor: '#00eaff',
+            tension: 0.3,
+            fill: false
+          }]
+        },
+        options: {
+          scales: {
+            x: { display: false },
+            y: { beginAtZero: true }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+    setupChart();
+
+    // Update chart live
+    function updateChart(multiplier) {
+      chartData.labels.push("");
+      chartData.data.push(multiplier);
+      if (chartData.data.length > 50) {
+        chartData.data.shift();
+        chartData.labels.shift();
+      }
+      chart.update();
+    }
 
     socket.on("connect", () => {
       statusEl.textContent = "🟢 Connected to FlyWithObed Live Aviator!";
@@ -164,56 +222,4 @@
       historyTable.innerHTML = "";
       history.forEach(h => {
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${h.round}</td><td>${h.crashPoint}x</td>`;
-        historyTable.appendChild(row);
-      });
-    });
-
-    socket.on("playersData", (players) => {
-      balanceA.textContent = players.A.balance.toFixed(2);
-      balanceB.textContent = players.B.balance.toFixed(2);
-    });
-
-    socket.on("roundStart", (data) => {
-      statusEl.innerHTML = `🛫 Round ${data.round} started — flying...`;
-      resultA.textContent = "";
-      resultB.textContent = "";
-      betA.textContent = data.players.A.bet > 0 ? `$${data.players.A.bet}` : "-";
-      betB.textContent = data.players.B.bet > 0 ? `$${data.players.B.bet}` : "-";
-      cashA.textContent = "-";
-      cashB.textContent = "-";
-
-      currentMultiplier = 1.00;
-      clearInterval(flyingInterval);
-      flyingInterval = setInterval(() => {
-        currentMultiplier += 0.05;
-        multiplierEl.textContent = currentMultiplier.toFixed(2) + "x";
-      }, 100);
-    });
-
-    socket.on("playerCashout", (data) => {
-      if (data.player === "Player A") {
-        resultA.innerHTML = `💰 Cashed out at ${data.cashout}x, Won $${data.win}`;
-        resultA.className = "cashout";
-        cashA.textContent = `${data.cashout}x`;
-      } else {
-        resultB.innerHTML = `💰 Cashed out at ${data.cashout}x, Won $${data.win}`;
-        resultB.className = "cashout";
-        cashB.textContent = `${data.cashout}x`;
-      }
-    });
-
-    socket.on("roundCrash", (data) => {
-      clearInterval(flyingInterval);
-      multiplierEl.textContent = data.crashPoint + "x";
-      statusEl.innerHTML = `💥 Crashed at <span class="crash">${data.crashPoint}x</span>`;
-      balanceA.textContent = data.players.A.balance.toFixed(2);
-      balanceB.textContent = data.players.B.balance.toFixed(2);
-
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${data.round}</td><td>${data.crashPoint}x</td>`;
-      historyTable.prepend(row);
-    });
-  </script>
-</body>
-</html>
+        row.innerHTML = `<td>${h.round}</td><td>${h.cras
