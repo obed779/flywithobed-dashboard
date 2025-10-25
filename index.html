@@ -7,58 +7,122 @@
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
-      background: #020d1f;
+      background: #0a0f1c;
       color: #fff;
-      font-family: "Segoe UI", sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      font-family: Arial, sans-serif;
       text-align: center;
-      height: 100vh;
-      margin: 0;
       padding: 20px;
     }
-    h1 { color: #00eaff; margin-bottom: 0; }
-    .plane { font-size: 4rem; margin: 10px; transition: transform 0.2s ease-in-out; }
-    .status { font-size: 1.3rem; margin-top: 5px; color: #bbb; }
-    .multiplier { font-size: 2.5rem; font-weight: bold; color: #00ff99; margin-top: 10px; }
-    .history {
-      margin-top: 25px;
-      width: 80%;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 10px;
-      overflow-y: auto;
-      max-height: 260px;
+    h1 {
+      color: #00ffcc;
     }
-    table { width: 100%; border-collapse: collapse; color: #fff; }
-    th, td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    th { color: #00eaff; }
-    .crashed { color: #ff4d4d; }
-    footer {
-      margin-top: 15px;
-      color: #666;
-      font-size: 0.9rem;
+    .plane {
+      font-size: 80px;
+      margin: 20px 0;
+    }
+    .status {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    .multiplier {
+      font-size: 48px;
+      color: #ffcc00;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 25px;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 10px;
+    }
+    th {
+      background-color: #222;
+    }
+    tr:nth-child(even) {
+      background-color: #111;
+    }
+    .live-indicator {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    .online {
+      background-color: #00ff88;
+      color: #000;
+    }
+    .offline {
+      background-color: #ff0044;
+      color: #fff;
     }
   </style>
 </head>
 <body>
   <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
+
+  <div id="status" class="status">Connecting to live server...</div>
   <div class="plane" id="plane">🛩️</div>
   <div class="multiplier" id="multiplier">1.00x</div>
-  <div class="status" id="status">Connecting to live server...</div>
 
-  <div class="history">
-    <table>
-      <thead>
-        <tr><th>Round</th><th>Crash Point</th></tr>
-      </thead>
-      <tbody id="history"></tbody>
-    </table>
-  </div>
+  <h3>📈 History</h3>
+  <table id="history">
+    <thead>
+      <tr><th>Round</th><th>Crash Point</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  <footer>© 2025 FlyWithObed Aviator Live</footer>
+  <div id="indicator" class="live-indicator offline">🔴 Offline</div>
 
-  <script src="script.js"></script>
+  <script>
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}`);
+
+    const multiplierEl = document.getElementById("multiplier");
+    const statusEl = document.getElementById("status");
+    const planeEl = document.getElementById("plane");
+    const indicatorEl = document.getElementById("indicator");
+    const historyBody = document.querySelector("#history tbody");
+
+    socket.onopen = () => {
+      statusEl.textContent = "✅ Connected to FlyWithObed Live Server!";
+      indicatorEl.textContent = "🟢 Live";
+      indicatorEl.classList.remove("offline");
+      indicatorEl.classList.add("online");
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "status") {
+        multiplierEl.textContent = data.multiplier + "x";
+        statusEl.textContent = data.status;
+
+        if (data.status.includes("crashed")) {
+          planeEl.textContent = "💥";
+          addToHistory(data.round, data.multiplier);
+        } else {
+          planeEl.textContent = "🛩️";
+        }
+      }
+    };
+
+    socket.onclose = () => {
+      statusEl.textContent = "⚠️ Disconnected from server.";
+      indicatorEl.textContent = "🔴 Offline";
+      indicatorEl.classList.remove("online");
+      indicatorEl.classList.add("offline");
+    };
+
+    function addToHistory(round, crash) {
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${round}</td><td>${crash}x</td>`;
+      historyBody.prepend(row);
+      if (historyBody.children.length > 10) historyBody.lastChild.remove();
+    }
+  </script>
 </body>
 </html>
