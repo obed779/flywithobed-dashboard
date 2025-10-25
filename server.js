@@ -1,48 +1,116 @@
 
+// server.js
 import express from "express";
-import { createServer } from "http";
-import { Server } from "socket.io";
+import http from "http";
+import { WebSocketServer } from "ws";
 import cors from "cors";
 
 const app = express();
-const server = createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" },
-});
-
 app.use(cors());
-app.get("/", (req, res) => res.send("✅ FlyWithObed Aviator API is live and running!"));
+app.use(express.json());
 
+const PORT = process.env.PORT || 10000;
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+
+// Aviator simulation data
 let round = 2045;
+let multiplier = 1.0;
+let inProgress = false;
+let target = 0;
+let history = [];
 
-function startRound() {
-  let multiplier = 1.0;
-  const crashPoint = (Math.random() * 10 + 1).toFixed(2);
-  io.emit("roundStart", { round, crashPoint });
-  console.log(`🟢 Round ${round} started (target ${crashPoint}x)`);
+console.log(`🚀 FlyWithObed Aviator Live Server running on port ${PORT}`);
 
-  const interval = setInterval(() => {
-    multiplier += 0.05;
-    io.emit("multiplierUpdate", { multiplier: multiplier.toFixed(2) });
-
-    if (multiplier >= crashPoint) {
-      clearInterval(interval);
-      io.emit("roundCrash", { crashPoint });
-      console.log(`💥 Round ${round} crashed at ${crashPoint}x`);
-      round++;
-      setTimeout(startRound, 3000);
-    }
-  }, 100);
+// Broadcast function to all clients
+function broadcast(data) {
+  const msg = JSON.stringify(data);
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) client.send(msg);
+  });
 }
 
-io.on("connection", (socket) => {
-  console.log("🧑‍✈️ Player connected");
-  socket.emit("connected", "Connected to FlyWithObed Aviator Live");
+// Start a new round
+function startRound() {
+  inProgress = true;
+  multiplier = 1.0;
+  target = +(Math.random() * 9 + 1).toFixed(2);
+  console.log(`🟢 Round ${round} started (target ${target}x)`);
+
+  broadcast({ type: "update", multiplier, round });
+
+  const interval = setInterval(() => {
+    if (!inProgress) {
+      clearInterval(interval);
+      return;
+    }
+
+    multiplier += 0.05;
+
+    if (multiplier >= target) {
+      clearInterval(interval);
+      crashPlane();
+    } else {
+      broadcast({ type: "update", multiplier, round });
+    }
+  }, 200);
+}
+
+// Crash function
+function crashPlane() {
+  inProgress = false;
+  console.log(`💥 Crashed at ${multiplier.toFixed(2)}x`);
+  history.unshift({ round, crashPoint: multiplier });
+  broadcast({ type: "crash", round, crashPoint: multiplier });
+
+  // Limit history to 20 entries
+  if (history.length > 20) history.pop();
+
+  setTimeout(() => {
+    round++;
+    startRound();
+  }, 3000);
+}
+
+// WebSocket connection
+wss.on("connection", (ws) => {
+  console.log("🔗 New client connected");
+
+  // Send current state
+  ws.send(JSON.stringify({ type: "update", multiplier, round }));
+  history.forEach((h) => ws.send(JSON.stringify({ type: "crash", ...h })));
+
+  // Handle chat messages
+  ws.on("message", (msg) => {
+    try {
+      const data = JSON.parse(msg);
+      if (data.type === "chat") {
+        broadcast({
+          type: "chat",
+          user: data.user || "Player",
+          message: data.message,
+        });
+      }
+    } catch (err) {
+      console.error("❌ Error parsing message:", err);
+    }
+  });
+
+  ws.on("close", () => {
+    console.log("🔌 Client disconnected");
+  });
 });
 
-server.listen(10000, () => {
-  console.log("🚀 FlyWithObed Aviator Live Server running on port 10000");
-  startRound();
+// API test route
+app.get("/", (req, res) => {
+  res.send("✅ FlyWithObed Aviator API is live and running!");
+});
+
+// Start the first round automatically
+startRound();
+
+server.listen(PORT, () => {
+  console.log(`✅ Server listening at https://flywithobed-livebet.onrender.com`);
 });
 
   
