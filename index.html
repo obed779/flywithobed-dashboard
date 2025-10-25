@@ -2,43 +2,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
+  <style>
+    body { background-color: #000; color: #00ff9c; text-align: center; font-family: Arial; padding-top: 50px; }
+    #multiplier { font-size: 4em; color: gold; }
+  </style>
 </head>
 <body>
   <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
-  <p id="status">Connecting...</p>
+  <div id="status">Connecting...</div>
   <div id="multiplier">---</div>
-  <div id="log"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    const statusEl = document.getElementById("status");
-    const multiplierEl = document.getElementById("multiplier");
-    const logEl = document.getElementById("log");
+    const statusEl = document.getElementById('status');
+    const multiplierEl = document.getElementById('multiplier');
 
-    socket.on("connect", () => {
-      statusEl.textContent = "✅ Connected to Aviator Server!";
-      statusEl.style.color = "#00ff9c";
+    socket.on('connect', () => {
+      statusEl.textContent = '✅ Connected to server';
     });
 
-    socket.on("multiplier", (value) => {
-      multiplierEl.textContent = value + "x";
-      logEl.textContent = "✈️ New round: " + value + "x";
+    socket.on('multiplier', (value) => {
+      multiplierEl.textContent = value + 'x';
     });
 
-    socket.on("disconnect", () => {
-      statusEl.textContent = "❌ Disconnected";
-      statusEl.style.color = "red";
+    socket.on('disconnect', () => {
+      statusEl.textContent = '❌ Disconnected';
     });
   </script>
-
-  <style>
-    body { background:#0a0a0a; color:#00ff9c; text-align:center; padding-top:60px; font-family:sans-serif; }
-    #multiplier { font-size:4rem; color:#ffcc00; }
-    #status { margin-bottom:20px; }
-  </style>
 </body>
 </html>
