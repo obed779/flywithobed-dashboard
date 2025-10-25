@@ -1,64 +1,49 @@
 
-import express from "express";
-import http from "http";
-import { Server } from "socket.io";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server);
 
-const PORT = process.env.PORT || 10000;
-
-// Serve dashboard + static assets
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   res.send("✅ FlyWithObed Aviator Game API is live and running!");
 });
 
-let currentMultiplier = 1.0;
-let crashPoint = randomCrash();
+let crashPoint = 1.0;
 let flying = false;
-
-function randomCrash() {
-  return (Math.random() * 9 + 1).toFixed(2); // between 1x–10x
-}
 
 function startRound() {
   flying = true;
-  currentMultiplier = 1.0;
-  crashPoint = randomCrash();
+  crashPoint = (Math.random() * 8 + 1).toFixed(2);
   io.emit("roundStart", { crashPoint });
+  console.log(`🎮 New round started! Will crash at: ${crashPoint}`);
 
-  const flight = setInterval(() => {
-    currentMultiplier += 0.05;
-    io.emit("multiplierUpdate", currentMultiplier.toFixed(2));
+  let multiplier = 1.0;
+  const interval = setInterval(() => {
+    multiplier += 0.05;
+    io.emit("multiplierUpdate", multiplier.toFixed(2));
 
-    if (currentMultiplier >= crashPoint) {
-      clearInterval(flight);
+    if (multiplier >= crashPoint) {
+      clearInterval(interval);
       flying = false;
       io.emit("roundCrash", crashPoint);
-      setTimeout(startRound, 4000);
+      console.log(`💥 Crashed at ${crashPoint}x`);
+      setTimeout(startRound, 3000);
     }
-  }, 200);
+  }, 300);
 }
 
 io.on("connection", (socket) => {
-  console.log("🟢 Player connected:", socket.id);
-  socket.emit("connected", { message: "Connected to FlyWithObed" });
-
-  if (!flying) startRound();
-
-  socket.on("disconnect", () => {
-    console.log("🔴 Player disconnected:", socket.id);
-  });
+  console.log("🧑‍✈️ Player connected");
+  socket.emit("connected", { message: "Connected to FlyWithObed Live Aviator" });
 });
 
-server.listen(PORT, () => {
-  console.log(`🚀 FlyWithObed Aviator API running on port ${PORT}`);
+server.listen(process.env.PORT || 10000, () => {
+  console.log("🚀 FlyWithObed Aviator API running on port 10000");
+  startRound();
 });
