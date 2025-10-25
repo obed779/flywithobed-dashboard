@@ -8,13 +8,12 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       background-color: #0a0a23;
-      color: white;
-      margin: 0;
-      padding: 20px;
+      color: #fff;
+      text-align: center;
+      padding: 30px;
     }
-    .plane { font-size: 60px; }
+    .plane { font-size: 60px; margin-top: 20px; }
     .multiplier { font-size: 48px; margin-top: 20px; color: #00ffcc; }
   </style>
 </head>
@@ -26,15 +25,12 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    const multiplierDisplay = document.getElementById("multiplier");
+    const display = document.getElementById("multiplier");
 
-    socket.on("message", (msg) => console.log(msg));
-    socket.on("multiplier", (value) => {
-      multiplierDisplay.innerText = value + "x";
-    });
-    socket.on("crash", (value) => {
-      multiplierDisplay.innerText = "💥 Crashed at " + value + "x";
-      setTimeout(() => multiplierDisplay.innerText = "Waiting...", 3000);
+    socket.on("multiplier", value => display.textContent = value + "x");
+    socket.on("crash", value => {
+      display.textContent = "💥 Crashed at " + value + "x";
+      setTimeout(() => display.textContent = "Waiting...", 3000);
     });
   </script>
 </body>
