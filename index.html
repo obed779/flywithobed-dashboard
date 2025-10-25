@@ -7,121 +7,204 @@
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
-      background: #0a0f1c;
+      background: #08121f;
       color: #fff;
-      font-family: Arial, sans-serif;
+      font-family: "Poppins", sans-serif;
       text-align: center;
+      margin: 0;
       padding: 20px;
     }
+
     h1 {
-      color: #00ffcc;
+      margin: 10px 0;
     }
+
     .plane {
-      font-size: 80px;
-      margin: 20px 0;
+      font-size: 60px;
+      margin: 10px 0;
+      transition: transform 0.3s ease-in-out;
     }
-    .status {
-      font-size: 18px;
-      margin-bottom: 15px;
-    }
+
     .multiplier {
-      font-size: 48px;
-      color: #ffcc00;
+      font-size: 40px;
+      color: #00ff9d;
     }
+
+    .status {
+      margin-bottom: 10px;
+      color: #ccc;
+    }
+
+    .players {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 20px;
+    }
+
+    .player {
+      background: #101b2e;
+      padding: 15px;
+      border-radius: 10px;
+      width: 260px;
+    }
+
+    input {
+      padding: 8px;
+      width: 70%;
+      border: none;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 8px 14px;
+      margin: 5px;
+      background: #0078ff;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #005fcc;
+    }
+
     table {
-      width: 100%;
+      width: 90%;
+      margin: 20px auto;
       border-collapse: collapse;
-      margin-top: 25px;
     }
+
     th, td {
       border: 1px solid #333;
-      padding: 10px;
+      padding: 8px;
     }
+
     th {
-      background-color: #222;
-    }
-    tr:nth-child(even) {
-      background-color: #111;
-    }
-    .live-indicator {
-      position: fixed;
-      top: 10px;
-      right: 20px;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-    .online {
-      background-color: #00ff88;
-      color: #000;
-    }
-    .offline {
-      background-color: #ff0044;
-      color: #fff;
+      background: #14213d;
     }
   </style>
 </head>
 <body>
   <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-
-  <div id="status" class="status">Connecting to live server...</div>
+  <div class="status" id="status">Connecting to Aviator Live...</div>
   <div class="plane" id="plane">🛩️</div>
   <div class="multiplier" id="multiplier">1.00x</div>
 
+  <div class="players">
+    <div class="player">
+      <h3>👨‍✈️ Player A</h3>
+      <p>Balance: $<span id="balanceA">1000</span></p>
+      <input type="number" id="betA" placeholder="Enter bet amount" />
+      <br>
+      <button onclick="placeBet('A')">Bet</button>
+      <button onclick="cashout('A')">Cashout</button>
+      <p id="resultA"></p>
+    </div>
+
+    <div class="player">
+      <h3>🧑‍✈️ Player B</h3>
+      <p>Balance: $<span id="balanceB">1000</span></p>
+      <input type="number" id="betB" placeholder="Enter bet amount" />
+      <br>
+      <button onclick="placeBet('B')">Bet</button>
+      <button onclick="cashout('B')">Cashout</button>
+      <p id="resultB"></p>
+    </div>
+  </div>
+
   <h3>📈 History</h3>
-  <table id="history">
-    <thead>
-      <tr><th>Round</th><th>Crash Point</th></tr>
-    </thead>
-    <tbody></tbody>
+  <table>
+    <thead><tr><th>Round</th><th>Crash Point</th></tr></thead>
+    <tbody id="history"></tbody>
   </table>
 
-  <div id="indicator" class="live-indicator offline">🔴 Offline</div>
-
   <script>
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(`${protocol}://${window.location.host}`);
-
+    const socket = new WebSocket("wss://flywithobed-livebet.onrender.com");
     const multiplierEl = document.getElementById("multiplier");
-    const statusEl = document.getElementById("status");
     const planeEl = document.getElementById("plane");
-    const indicatorEl = document.getElementById("indicator");
-    const historyBody = document.querySelector("#history tbody");
+    const historyEl = document.getElementById("history");
+    const statusEl = document.getElementById("status");
+
+    let balanceA = 1000, balanceB = 1000;
+    let activeBetA = null, activeBetB = null;
+    let currentMultiplier = 1;
 
     socket.onopen = () => {
-      statusEl.textContent = "✅ Connected to FlyWithObed Live Server!";
-      indicatorEl.textContent = "🟢 Live";
-      indicatorEl.classList.remove("offline");
-      indicatorEl.classList.add("online");
+      statusEl.textContent = "🟢 Connected to FlyWithObed Live Server!";
     };
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "status") {
-        multiplierEl.textContent = data.multiplier + "x";
-        statusEl.textContent = data.status;
+    socket.onmessage = (msg) => {
+      const data = JSON.parse(msg.data);
 
-        if (data.status.includes("crashed")) {
-          planeEl.textContent = "💥";
-          addToHistory(data.round, data.multiplier);
-        } else {
-          planeEl.textContent = "🛩️";
-        }
+      if (data.multiplier) {
+        currentMultiplier = data.multiplier;
+        multiplierEl.textContent = currentMultiplier.toFixed(2) + "x";
+        planeEl.style.transform = `translateX(${currentMultiplier * 10}px)`;
+      }
+
+      if (data.round && data.message?.includes("started")) {
+        statusEl.textContent = `🟢 Round ${data.round} started (target ${data.target.toFixed(2)}x)`;
+      }
+
+      if (data.crashPoint) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${data.round}</td><td>${data.crashPoint.toFixed(2)}x</td>`;
+        historyEl.prepend(tr);
+        endRound(data.crashPoint);
       }
     };
 
-    socket.onclose = () => {
-      statusEl.textContent = "⚠️ Disconnected from server.";
-      indicatorEl.textContent = "🔴 Offline";
-      indicatorEl.classList.remove("online");
-      indicatorEl.classList.add("offline");
-    };
+    function placeBet(player) {
+      const bet = parseFloat(document.getElementById("bet" + player).value);
+      if (!bet || bet <= 0) return alert("Enter a valid bet amount!");
 
-    function addToHistory(round, crash) {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${round}</td><td>${crash}x</td>`;
-      historyBody.prepend(row);
-      if (historyBody.children.length > 10) historyBody.lastChild.remove();
+      if (player === "A" && !activeBetA && balanceA >= bet) {
+        balanceA -= bet;
+        activeBetA = { amount: bet };
+        document.getElementById("balanceA").textContent = balanceA.toFixed(2);
+        document.getElementById("resultA").textContent = `🟡 Bet $${bet}`;
+      }
+
+      if (player === "B" && !activeBetB && balanceB >= bet) {
+        balanceB -= bet;
+        activeBetB = { amount: bet };
+        document.getElementById("balanceB").textContent = balanceB.toFixed(2);
+        document.getElementById("resultB").textContent = `🟡 Bet $${bet}`;
+      }
+    }
+
+    function cashout(player) {
+      if (player === "A" && activeBetA) {
+        const profit = activeBetA.amount * currentMultiplier;
+        balanceA += profit;
+        activeBetA = null;
+        document.getElementById("balanceA").textContent = balanceA.toFixed(2);
+        document.getElementById("resultA").textContent = `💰 Cashed out at ${currentMultiplier.toFixed(2)}x`;
+      }
+
+      if (player === "B" && activeBetB) {
+        const profit = activeBetB.amount * currentMultiplier;
+        balanceB += profit;
+        activeBetB = null;
+        document.getElementById("balanceB").textContent = balanceB.toFixed(2);
+        document.getElementById("resultB").textContent = `💰 Cashed out at ${currentMultiplier.toFixed(2)}x`;
+      }
+    }
+
+    function endRound(crashPoint) {
+      if (activeBetA) {
+        document.getElementById("resultA").textContent = `💥 Lost at ${crashPoint.toFixed(2)}x`;
+        activeBetA = null;
+      }
+
+      if (activeBetB) {
+        document.getElementById("resultB").textContent = `💥 Lost at ${crashPoint.toFixed(2)}x`;
+        activeBetB = null;
+      }
     }
   </script>
 </body>
