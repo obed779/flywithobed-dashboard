@@ -133,6 +133,7 @@
       multiplierDisplay.classList.add("flying");
       multiplierDisplay.classList.remove("crash");
       status.textContent = data.message;
+      multiplierDisplay.textContent = "1.00x";
       plane.style.transform = "translateX(0px)";
     });
 
@@ -147,7 +148,7 @@
       isFlying = false;
       multiplierDisplay.classList.remove("flying");
       multiplierDisplay.classList.add("crash");
-      multiplierDisplay.textContent = data.message;
+      multiplierDisplay.textContent = `💥 Crashed at ${data.history[0].crashPoint}x`;
       status.textContent = "💥 Crash! Next round starting...";
       updateHistory(data.history);
     });
@@ -184,3 +185,4 @@
   </script>
 </body>
 </html>
+
