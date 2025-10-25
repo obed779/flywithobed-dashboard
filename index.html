@@ -9,10 +9,10 @@
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #001f3f, #005f73);
+      background: radial-gradient(circle at top, #001f3f, #001b2e);
       color: #fff;
       text-align: center;
-      padding: 30px;
+      padding: 20px;
     }
 
     h1 {
@@ -22,7 +22,7 @@
 
     #status {
       font-size: 1.2rem;
-      margin: 10px 0;
+      margin: 10px 0 30px;
       color: #ffcc00;
     }
 
@@ -33,8 +33,52 @@
 
     @keyframes fly {
       0% { transform: translateX(0); }
-      50% { transform: translateX(30px) translateY(-10px); }
+      50% { transform: translateX(40px) translateY(-15px); }
       100% { transform: translateX(0); }
+    }
+
+    .players {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin: 30px 0;
+    }
+
+    .player-card {
+      background: rgba(255,255,255,0.08);
+      padding: 20px;
+      border-radius: 20px;
+      width: 240px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .player-card h3 {
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+    }
+
+    input {
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      width: 80%;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 10px;
+      background-color: #00bfa6;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #00997f;
     }
 
     #history {
@@ -43,17 +87,17 @@
 
     table {
       margin: 0 auto;
-      width: 60%;
+      width: 70%;
       border-collapse: collapse;
     }
 
     th, td {
       padding: 10px;
-      border-bottom: 1px solid #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
     }
 
     th {
-      background-color: rgba(255,255,255,0.2);
+      background-color: rgba(255,255,255,0.15);
     }
   </style>
 </head>
@@ -62,6 +106,32 @@
   <div class="plane">🛩️</div>
   <div id="status">Connecting...</div>
 
+  <!-- Player Panels -->
+  <div class="players">
+    <div class="player-card" id="playerA">
+      <h3>👨‍✈️ Player A</h3>
+      <p>Balance: $<span id="balanceA">1000</span></p>
+      <input id="betA" type="number" placeholder="Enter bet amount" />
+      <div>
+        <button onclick="placeBet('A')">Bet</button>
+        <button onclick="cashOut('A')">Cashout</button>
+      </div>
+      <p id="statusA"></p>
+    </div>
+
+    <div class="player-card" id="playerB">
+      <h3>🧑‍✈️ Player B</h3>
+      <p>Balance: $<span id="balanceB">1000</span></p>
+      <input id="betB" type="number" placeholder="Enter bet amount" />
+      <div>
+        <button onclick="placeBet('B')">Bet</button>
+        <button onclick="cashOut('B')">Cashout</button>
+      </div>
+      <p id="statusB"></p>
+    </div>
+  </div>
+
+  <!-- Crash History -->
   <h2>📈 History</h2>
   <table>
     <thead>
@@ -74,12 +144,15 @@
   </table>
 
   <script>
-    const socket = io("https://flywithobed-skyhigh.onrender.com"); // 🔗 Connects to your live backend
+    const socket = io("https://flywithobed-skyhigh.onrender.com"); // connect live
     const statusEl = document.getElementById("status");
     const historyBody = document.getElementById("history-body");
 
     let roundCount = 0;
+    let balances = { A: 1000, B: 1000 };
+    let activeBets = { A: 0, B: 0 };
 
+    // Socket status
     socket.on("connect", () => {
       statusEl.textContent = "✅ Connected to FlyWithObed Live Aviator!";
       statusEl.style.color = "#00ff99";
@@ -90,28 +163,62 @@
       statusEl.style.color = "red";
     });
 
-    // Listen for round start
+    // Game events
     socket.on("roundStart", (data) => {
       roundCount++;
       statusEl.textContent = `🛫 Round ${roundCount} started — will crash at ${data.crashPoint}x`;
       statusEl.style.color = "#ffcc00";
+
+      document.getElementById("statusA").textContent = "";
+      document.getElementById("statusB").textContent = "";
     });
 
-    // Listen for crash event
     socket.on("roundCrash", (data) => {
       statusEl.textContent = `💥 Crashed at ${data.crashPoint}x`;
       statusEl.style.color = "#ff3366";
 
-      // Add to table
       const row = document.createElement("tr");
-      const cell1 = document.createElement("td");
-      const cell2 = document.createElement("td");
-      cell1.textContent = roundCount;
-      cell2.textContent = `${data.crashPoint}x`;
-      row.appendChild(cell1);
-      row.appendChild(cell2);
+      row.innerHTML = `<td>${roundCount}</td><td>${data.crashPoint}x</td>`;
       historyBody.prepend(row);
+
+      // Handle losses
+      for (const p of ["A","B"]) {
+        if (activeBets[p] > 0) {
+          document.getElementById("status"+p).textContent = "💥 Lost $" + activeBets[p];
+          activeBets[p] = 0;
+        }
+      }
     });
+
+    // Player bet and cashout
+    function placeBet(player) {
+      const betInput = document.getElementById("bet" + player);
+      const amount = parseFloat(betInput.value);
+      if (!amount || amount <= 0) return alert("Enter valid bet");
+
+      if (balances[player] >= amount) {
+        balances[player] -= amount;
+        activeBets[player] = amount;
+        document.getElementById("balance" + player).textContent = balances[player];
+        document.getElementById("status" + player).textContent = `🟡 Bet placed: $${amount}`;
+      } else {
+        alert("Insufficient balance");
+      }
+    }
+
+    function cashOut(player) {
+      if (activeBets[player] > 0) {
+        const multiplier = Math.random() * 3 + 1; // simulate early cashout multiplier
+        const win = (activeBets[player] * multiplier).toFixed(2);
+        balances[player] += parseFloat(win);
+        document.getElementById("balance" + player).textContent = balances[player];
+        document.getElementById("status" + player).textContent = `✅ Cashed out at ${multiplier.toFixed(2)}x, won $${win}`;
+        activeBets[player] = 0;
+      } else {
+        document.getElementById("status" + player).textContent = "No active bet.";
+      }
+    }
   </script>
 </body>
 </html>
+
