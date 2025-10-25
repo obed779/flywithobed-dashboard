@@ -1,52 +1,57 @@
 
+// server.js
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
-import path from "path";
-import { fileURLToPath } from "url";
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const PORT = process.env.PORT || 10000;
 
-// Serve files from "public"
-app.use(express.static(path.join(__dirname, "public")));
+// Serve static files from /public
+app.use(express.static("public"));
 
+// Fallback route to serve index.html
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(process.cwd() + "/public/index.html");
 });
 
+// Game logic
 let multiplier = 1.0;
+let crashPoint = 1.0;
 
 function startRound() {
-  multiplier = 1.0;
-  const crashPoint = (Math.random() * 8 + 1).toFixed(2);
-  console.log(`🛫 Round started. Crash at ${crashPoint}x`);
+  crashPoint = (Math.random() * 9 + 1).toFixed(2);
+  console.log(`🛫 New round started! Crash point: ${crashPoint}x`);
 
-  const interval = setInterval(() => {
-    multiplier += 0.05;
-    io.emit("multiplier", multiplier.toFixed(2));
+  let interval = setInterval(() => {
+    multiplier = (multiplier + 0.05).toFixed(2);
+    io.emit("multiplier", multiplier);
 
     if (multiplier >= crashPoint) {
       clearInterval(interval);
       io.emit("crash", crashPoint);
       console.log(`💥 Crashed at ${crashPoint}x`);
-      setTimeout(startRound, 3000);
+      setTimeout(() => {
+        multiplier = 1.0;
+        startRound();
+      }, 2000);
     }
-  }, 300);
+  }, 200);
 }
 
 io.on("connection", (socket) => {
-  console.log("👨‍✈️ Player connected");
-  socket.emit("message", "Connected to Aviator Live Server");
+  console.log("🧑‍✈️ A player joined");
+  socket.emit("multiplier", multiplier);
 });
 
-server.listen(10000, () => {
-  console.log("✅ FlyWithObed Aviator Game API is live and running on port 10000!");
+server.listen(PORT, () => {
+  console.log(`✅ FlyWithObed Aviator Game API is live and running on port ${PORT}`);
   startRound();
 });
+
+
 
 
