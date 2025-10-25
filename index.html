@@ -7,30 +7,41 @@
   <title>🛩️ FlyWithObed Live Aviator Dashboard</title>
   <style>
     body {
+      background: radial-gradient(circle at center, #001f3f, #000);
+      color: white;
       font-family: Arial, sans-serif;
-      background-color: #0a0a23;
-      color: #fff;
       text-align: center;
-      padding: 30px;
+      padding-top: 50px;
     }
-    .plane { font-size: 60px; margin-top: 20px; }
-    .multiplier { font-size: 48px; margin-top: 20px; color: #00ffcc; }
+    h1 { color: #00ffff; }
+    .plane { font-size: 80px; margin-top: 40px; }
+    .multiplier {
+      font-size: 64px;
+      font-weight: bold;
+      color: #00ff99;
+      margin-top: 20px;
+    }
+    .crashed { color: #ff4444; }
   </style>
 </head>
 <body>
-  <h1>🛩️ FlyWithObed Live Aviator Dashboard</h1>
+  <h1>🛩️ FlyWithObed Aviator Live Dashboard</h1>
   <div class="plane">✈️</div>
-  <div id="multiplier" class="multiplier">Waiting...</div>
+  <div id="multiplier" class="multiplier">Waiting for flight...</div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const display = document.getElementById("multiplier");
 
-    socket.on("multiplier", value => display.textContent = value + "x");
+    socket.on("multiplier", value => {
+      display.textContent = value + "x";
+      display.classList.remove("crashed");
+    });
+
     socket.on("crash", value => {
       display.textContent = "💥 Crashed at " + value + "x";
-      setTimeout(() => display.textContent = "Waiting...", 3000);
+      display.classList.add("crashed");
     });
   </script>
 </body>
