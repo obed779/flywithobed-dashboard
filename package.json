@@ -2,6 +2,7 @@
   "name": "flywithobed-dashboard",
   "version": "1.0.0",
   "description": "FlyWithObed Aviator Dashboard",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -14,4 +15,3 @@
     "ws": "^8.17.0"
   }
 }
-
