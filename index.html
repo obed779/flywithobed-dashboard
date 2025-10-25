@@ -5,158 +5,113 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(180deg, #081b33, #0b2a4a);
-      color: white;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #001f3f, #005f73);
+      color: #fff;
       text-align: center;
-      margin: 0;
-      padding: 0;
+      padding: 30px;
     }
-    h1 { margin: 20px 0; }
-    .multiplier {
-      font-size: 3em;
-      color: #00ffcc;
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    #status {
+      font-size: 1.2rem;
       margin: 10px 0;
+      color: #ffcc00;
     }
-    .status {
-      font-size: 1.2em;
-      margin-bottom: 20px;
+
+    .plane {
+      font-size: 5rem;
+      animation: fly 2s infinite linear;
     }
-    .players {
-      display: flex;
-      justify-content: center;
-      gap: 60px;
-      margin-bottom: 20px;
+
+    @keyframes fly {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(30px) translateY(-10px); }
+      100% { transform: translateX(0); }
     }
-    .player {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 20px;
-      width: 200px;
+
+    #history {
+      margin-top: 20px;
     }
-    input {
-      width: 80%;
-      padding: 6px;
-      border: none;
-      border-radius: 8px;
-      margin-bottom: 8px;
-    }
-    button {
-      width: 90%;
-      padding: 8px;
-      border: none;
-      border-radius: 8px;
-      background: #00bcd4;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover { background: #0097a7; }
+
     table {
-      width: 60%;
       margin: 0 auto;
+      width: 60%;
       border-collapse: collapse;
-      margin-bottom: 40px;
     }
-    table, th, td {
-      border: 1px solid #00bcd4;
-    }
+
     th, td {
-      padding: 8px;
+      padding: 10px;
+      border-bottom: 1px solid #fff;
+    }
+
+    th {
+      background-color: rgba(255,255,255,0.2);
     }
   </style>
 </head>
 <body>
   <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <div class="multiplier" id="multiplier">Multiplier: 1.00x</div>
-  <div class="status" id="status">Status: waiting for round...</div>
+  <div class="plane">🛩️</div>
+  <div id="status">Connecting...</div>
 
-  <div class="players">
-    <div class="player">
-      <h3>👨‍✈️ Player A</h3>
-      <p>Balance: $<span id="balanceA">1000</span></p>
-      <input type="number" id="betA" placeholder="Enter bet" />
-      <button onclick="placeBet('A')">Bet</button>
-      <button onclick="cashout('A')">Cashout</button>
-    </div>
-    <div class="player">
-      <h3>🧑‍✈️ Player B</h3>
-      <p>Balance: $<span id="balanceB">1000</span></p>
-      <input type="number" id="betB" placeholder="Enter bet" />
-      <button onclick="placeBet('B')">Bet</button>
-      <button onclick="cashout('B')">Cashout</button>
-    </div>
-  </div>
-
-  <h3>📈 History</h3>
+  <h2>📈 History</h2>
   <table>
     <thead>
-      <tr><th>Round</th><th>Crash Point</th></tr>
+      <tr>
+        <th>Round</th>
+        <th>Crash Point</th>
+      </tr>
     </thead>
-    <tbody id="history">
-      <!-- Updated dynamically -->
-    </tbody>
+    <tbody id="history-body"></tbody>
   </table>
 
   <script>
-    let round = 1;
-    let history = [];
-    let multiplier = 1.00;
-    let running = false;
+    const socket = io("https://flywithobed-skyhigh.onrender.com"); // 🔗 Connects to your live backend
+    const statusEl = document.getElementById("status");
+    const historyBody = document.getElementById("history-body");
 
-    function startRound() {
-      running = true;
-      document.getElementById('status').textContent = `Status: Round ${round} flying...`;
-      multiplier = 1.00;
-      const crashPoint = (Math.random() * 8 + 1).toFixed(2);
+    let roundCount = 0;
 
-      const interval = setInterval(() => {
-        multiplier += 0.05;
-        document.getElementById('multiplier').textContent = `Multiplier: ${multiplier.toFixed(2)}x`;
-        if (multiplier >= crashPoint) {
-          clearInterval(interval);
-          running = false;
-          document.getElementById('status').textContent = `💥 Crashed at ${crashPoint}x`;
-          history.unshift({ round, crashPoint });
-          updateHistory();
-          round++;
-          setTimeout(startRound, 4000);
-        }
-      }, 100);
-    }
+    socket.on("connect", () => {
+      statusEl.textContent = "✅ Connected to FlyWithObed Live Aviator!";
+      statusEl.style.color = "#00ff99";
+    });
 
-    function updateHistory() {
-      const tbody = document.getElementById('history');
-      tbody.innerHTML = '';
-      history.slice(0, 20).forEach(row => {
-        tbody.innerHTML += `<tr><td>${row.round}</td><td>${row.crashPoint}x</td></tr>`;
-      });
-    }
+    socket.on("disconnect", () => {
+      statusEl.textContent = "🔴 Disconnected from server";
+      statusEl.style.color = "red";
+    });
 
-    function placeBet(player) {
-      const input = document.getElementById(`bet${player}`);
-      const balanceEl = document.getElementById(`balance${player}`);
-      const bet = parseFloat(input.value);
-      let balance = parseFloat(balanceEl.textContent);
-      if (!bet || bet <= 0 || bet > balance) return alert("Invalid bet!");
-      balance -= bet;
-      balanceEl.textContent = balance.toFixed(2);
-      alert(`Player ${player} placed $${bet}`);
-    }
+    // Listen for round start
+    socket.on("roundStart", (data) => {
+      roundCount++;
+      statusEl.textContent = `🛫 Round ${roundCount} started — will crash at ${data.crashPoint}x`;
+      statusEl.style.color = "#ffcc00";
+    });
 
-    function cashout(player) {
-      const balanceEl = document.getElementById(`balance${player}`);
-      let balance = parseFloat(balanceEl.textContent);
-      const reward = (multiplier * 5).toFixed(2);
-      balance += parseFloat(reward);
-      balanceEl.textContent = balance.toFixed(2);
-      alert(`Player ${player} cashed out $${reward}`);
-    }
+    // Listen for crash event
+    socket.on("roundCrash", (data) => {
+      statusEl.textContent = `💥 Crashed at ${data.crashPoint}x`;
+      statusEl.style.color = "#ff3366";
 
-    // Start the loop
-    startRound();
+      // Add to table
+      const row = document.createElement("tr");
+      const cell1 = document.createElement("td");
+      const cell2 = document.createElement("td");
+      cell1.textContent = roundCount;
+      cell2.textContent = `${data.crashPoint}x`;
+      row.appendChild(cell1);
+      row.appendChild(cell2);
+      historyBody.prepend(row);
+    });
   </script>
 </body>
 </html>
