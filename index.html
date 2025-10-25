@@ -5,112 +5,151 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-</head>
-<body class="bg-gray-900 text-white font-sans">
 
-  <div class="grid grid-cols-5 grid-rows-[auto_1fr_auto] h-screen gap-3 p-4">
-    
-    <!-- Left: History -->
-    <div class="col-span-1 bg-gray-800 rounded-2xl p-4 overflow-y-auto">
-      <h2 class="text-lg font-bold mb-3">📈 History</h2>
-      <ul id="history" class="space-y-2 text-sm"></ul>
+  <!-- ✅ Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ✅ Socket.io -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at center, #001f3f, #000);
+      color: white;
+      font-family: "Poppins", sans-serif;
+      overflow: hidden;
+    }
+    #plane {
+      transition: transform 0.2s ease;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen">
+
+  <!-- 🧭 Header -->
+  <header class="flex justify-between items-center bg-gray-800 p-4 text-white text-lg font-bold shadow-md">
+    <div>✈️ FlyWithObed Live Aviator Dashboard</div>
+    <div id="balance" class="text-yellow-400">💰 Balances: Loading...</div>
+  </header>
+
+  <!-- 🧩 Main Layout -->
+  <div class="flex flex-1">
+    <!-- 📈 History (Left Side) -->
+    <div class="w-1/4 p-3 bg-gray-900 overflow-y-auto border-r border-gray-700">
+      <h2 class="text-xl font-semibold mb-2 text-yellow-300">📈 History</h2>
+      <table id="history" class="w-full text-sm">
+        <thead>
+          <tr class="text-yellow-400 border-b border-gray-600">
+            <th class="text-left py-1">Round</th>
+            <th class="text-right py-1">Crash</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
 
-    <!-- Center: Flight + Chat -->
-    <div class="col-span-3 bg-gray-800 rounded-2xl p-4 flex flex-col items-center justify-between">
-      <div class="text-center">
-        <h1 class="text-2xl font-bold">✈️ FlyWithObed Aviator</h1>
-        <p id="round" class="text-gray-400 mt-1">Waiting for next round...</p>
-      </div>
+    <!-- 🛩️ Live Flight + Chat (Center) -->
+    <div class="flex-1 flex flex-col items-center justify-center">
+      <div id="status" class="text-2xl font-bold mb-2 text-green-400">Connecting...</div>
+      <div id="plane" class="text-7xl mb-4">🛩️</div>
+      <div id="multiplier" class="text-5xl font-mono text-yellow-400 mb-6">1.00x</div>
 
-      <!-- Plane Animation -->
-      <div id="plane" class="text-6xl mt-10 transition-transform duration-500">🛩️</div>
-      <p id="multiplier" class="text-3xl font-bold mt-4 text-green-400">1.00x</p>
+      <!-- 💬 Live Chat -->
+      <div class="w-3/4 h-40 overflow-y-auto bg-gray-800 p-3 rounded-md border border-gray-700" id="chat"></div>
+      <input
+        id="chatInput"
+        placeholder="Type message..."
+        class="mt-2 w-3/4 p-2 rounded text-black outline-none"
+      />
+    </div>
 
-      <!-- Live Chat -->
-      <div class="w-full bg-gray-700 p-2 rounded-lg mt-8 flex-1 flex flex-col">
-        <div id="chat-box" class="flex-1 overflow-y-auto text-sm space-y-1 mb-2"></div>
-        <div class="flex">
-          <input id="chat-input" class="flex-1 p-2 bg-gray-800 rounded-l-lg outline-none" placeholder="Type message..." />
-          <button id="send-chat" class="bg-blue-600 px-4 rounded-r-lg">Send</button>
+    <!-- 👨‍✈️ Player Panels (Right Side) -->
+    <div class="w-1/4 p-3 bg-gray-900 border-l border-gray-700">
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-2 text-blue-400">👨‍✈️ Player A</h2>
+        <div id="playerA" class="text-sm text-gray-200">
+          Balance: $1000<br />
+          Bet: —<br />
+          Cashout: —
         </div>
       </div>
-    </div>
 
-    <!-- Right: Balances -->
-    <div class="col-span-1 bg-gray-800 rounded-2xl p-4">
-      <h2 class="text-lg font-bold mb-3">💰 Balances</h2>
-      <div class="mb-3">
-        👨‍✈️ <span class="font-semibold">Player A:</span>
-        <span id="balanceA">$1000.00</span>
-      </div>
       <div>
-        🧑‍✈️ <span class="font-semibold">Player B:</span>
-        <span id="balanceB">$1000.00</span>
-      </div>
-    </div>
-
-    <!-- Bottom: Betting Area -->
-    <div class="col-span-5 flex justify-around bg-gray-800 rounded-2xl p-4">
-      <div class="flex flex-col items-center space-y-2">
-        <h3 class="font-semibold">👨‍✈️ Player A</h3>
-        <input id="betA" type="number" placeholder="Bet amount" class="bg-gray-700 p-2 rounded text-center w-32" />
-        <button id="betA-btn" class="bg-green-600 px-4 py-1 rounded">Bet</button>
-        <button id="cashoutA-btn" class="bg-yellow-500 px-4 py-1 rounded">Cashout</button>
-      </div>
-
-      <div class="flex flex-col items-center space-y-2">
-        <h3 class="font-semibold">🧑‍✈️ Player B</h3>
-        <input id="betB" type="number" placeholder="Bet amount" class="bg-gray-700 p-2 rounded text-center w-32" />
-        <button id="betB-btn" class="bg-green-600 px-4 py-1 rounded">Bet</button>
-        <button id="cashoutB-btn" class="bg-yellow-500 px-4 py-1 rounded">Cashout</button>
+        <h2 class="text-xl font-semibold mb-2 text-pink-400">🧑‍✈️ Player B</h2>
+        <div id="playerB" class="text-sm text-gray-200">
+          Balance: $1000<br />
+          Bet: —<br />
+          Cashout: —
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- 🎯 Betting Controls -->
+  <footer class="bg-gray-800 p-4 flex justify-around border-t border-gray-700">
+    <div class="text-center">
+      <div class="mb-2 text-blue-300 font-semibold">👨‍✈️ Player A</div>
+      <button id="betA" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Bet</button>
+      <button id="cashoutA" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded ml-2">Cashout</button>
+    </div>
+    <div class="text-center">
+      <div class="mb-2 text-pink-300 font-semibold">🧑‍✈️ Player B</div>
+      <button id="betB" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Bet</button>
+      <button id="cashoutB" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded ml-2">Cashout</button>
+    </div>
+  </footer>
+
+  <!-- 📡 Socket Connection Logic -->
   <script>
-    const socket = io("https://obedaviator.onrender.com");
+    // 🟢 Connect to your backend — change this to match your Render or local URL
+    const socket = io("https://flywithobed.onrender.com");
 
+    const status = document.getElementById("status");
+    const multiplierDisplay = document.getElementById("multiplier");
     const plane = document.getElementById("plane");
-    const multiplierEl = document.getElementById("multiplier");
-    const historyEl = document.getElementById("history");
-    const chatBox = document.getElementById("chat-box");
-    const chatInput = document.getElementById("chat-input");
-    const sendChat = document.getElementById("send-chat");
-    const balanceA = document.getElementById("balanceA");
-    const balanceB = document.getElementById("balanceB");
-    const roundEl = document.getElementById("round");
+    const chatBox = document.getElementById("chat");
+    const chatInput = document.getElementById("chatInput");
+    const historyBody = document.querySelector("#history tbody");
+    const balanceDisplay = document.getElementById("balance");
+    const playerA = document.getElementById("playerA");
+    const playerB = document.getElementById("playerB");
 
-    let multiplier = 1.00;
-    let flying = false;
+    let balances = { A: 1000, B: 1000 };
 
-    // --- SOCKET EVENTS ---
-    socket.on("connect", () => console.log("✅ Connected to Aviator Server"));
+    // 🔌 Connection
+    socket.on("connect", () => {
+      status.textContent = "🛫 Connected — waiting for round...";
+    });
+
+    // 🛫 Round Start
     socket.on("roundStart", (data) => {
-      flying = true;
-      multiplier = 1.00;
-      roundEl.textContent = `🛫 Round ${data.round} started — flying...`;
-      plane.style.transform = "translateX(0px)";
-      multiplierEl.textContent = "1.00x";
+      status.textContent = `🛫 Round ${data.round} started — flying...`;
+      multiplierDisplay.textContent = "1.00x";
+      plane.textContent = "🛩️";
     });
 
+    // 📈 Round Updates
     socket.on("roundUpdate", (data) => {
-      multiplier = data.multiplier;
-      multiplierEl.textContent = `${multiplier.toFixed(2)}x`;
-      plane.style.transform = `translateX(${multiplier * 20}px)`;
+      multiplierDisplay.textContent = `${data.multiplier.toFixed(2)}x`;
+      plane.style.transform = `translateX(${data.multiplier * 15}px)`;
     });
 
+    // 💥 Round End (Crash)
     socket.on("roundEnd", (data) => {
-      flying = false;
-      multiplierEl.textContent = `💥 Crashed at ${data.crashPoint.toFixed(2)}x`;
-      plane.style.transform = "translateX(0px)";
-      const li = document.createElement("li");
-      li.textContent = `Round ${data.round}: ${data.crashPoint.toFixed(2)}x`;
-      historyEl.prepend(li);
+      status.textContent = `💥 Crashed at ${data.crashPoint}x`;
+      plane.textContent = "🔥";
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${data.round}</td><td class='text-right text-red-400'>${data.crashPoint}x</td>`;
+      historyBody.prepend(row);
     });
 
+    // 💰 Balance Update
+    socket.on("balanceUpdate", (data) => {
+      balances[data.player] = data.balance;
+      balanceDisplay.textContent = `💰 A: $${balances.A.toFixed(2)} | B: $${balances.B.toFixed(2)}`;
+    });
+
+    // 💬 Chat Messages
     socket.on("chatMessage", (msg) => {
       const p = document.createElement("p");
       p.textContent = msg;
@@ -118,33 +157,20 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    sendChat.onclick = () => {
-      const msg = chatInput.value.trim();
-      if (!msg) return;
-      socket.emit("chatMessage", msg);
-      chatInput.value = "";
-    };
-
-    socket.on("balanceUpdate", (data) => {
-      if (data.player === "A") balanceA.textContent = `$${data.balance.toFixed(2)}`;
-      if (data.player === "B") balanceB.textContent = `$${data.balance.toFixed(2)}`;
+    // ✉️ Send Chat
+    chatInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter" && chatInput.value.trim()) {
+        socket.emit("chatMessage", chatInput.value);
+        chatInput.value = "";
+      }
     });
 
-    // Bet & Cashout actions
-    document.getElementById("betA-btn").onclick = () => {
-      const amount = parseFloat(document.getElementById("betA").value);
-      if (amount > 0) socket.emit("bet", { player: "A", amount });
-    };
-    document.getElementById("cashoutA-btn").onclick = () => socket.emit("cashout", { player: "A" });
-
-    document.getElementById("betB-btn").onclick = () => {
-      const amount = parseFloat(document.getElementById("betB").value);
-      if (amount > 0) socket.emit("bet", { player: "B", amount });
-    };
-    document.getElementById("cashoutB-btn").onclick = () => socket.emit("cashout", { player: "B" });
+    // 🎲 Betting Buttons
+    document.getElementById("betA").onclick = () => socket.emit("bet", { player: "A", amount: 20 });
+    document.getElementById("cashoutA").onclick = () => socket.emit("cashout", { player: "A" });
+    document.getElementById("betB").onclick = () => socket.emit("bet", { player: "B", amount: 20 });
+    document.getElementById("cashoutB").onclick = () => socket.emit("cashout", { player: "B" });
   </script>
 
 </body>
 </html>
-
-        
