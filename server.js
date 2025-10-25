@@ -1,12 +1,8 @@
 
-import express from "express";
-import http from "http";
-import { Server } from "socket.io";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
@@ -18,17 +14,13 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-let crashPoint = 1.0;
-setInterval(() => {
-  crashPoint = (Math.random() * 10 + 1).toFixed(2);
-  io.emit("multiplier", crashPoint);
-  console.log(`🛫 Round started at ${crashPoint}x`);
-}, 5000);
+let multiplier = 1.0;
 
-io.on("connection", (socket) => {
-  console.log("🧑‍✈️ Player connected", socket.id);
-  socket.emit("multiplier", crashPoint);
-});
+setInterval(() => {
+  multiplier = (Math.random() * 10).toFixed(2);
+  io.emit("multiplier", multiplier);
+  console.log("🛫 Round started at " + multiplier + "x");
+}, 5000);
 
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
