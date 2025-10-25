@@ -3,69 +3,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>✈️ FlyWithObed Live Aviator Dashboard</title>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     body {
-      background: #0d1117;
-      color: white;
       font-family: Arial, sans-serif;
+      background-color: #0d1117;
+      color: #ffffff;
       text-align: center;
+      padding-top: 50px;
+    }
+    h1 {
+      color: #00ffcc;
+      font-size: 2em;
+    }
+    .log {
+      margin-top: 20px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #161b22;
+      border-radius: 10px;
       padding: 20px;
-    }
-    h1 { color: #00bcd4; }
-    #multiplier {
-      font-size: 3rem;
-      margin: 20px 0;
-      color: #00ff95;
-    }
-    table {
-      margin: 0 auto;
-      border-collapse: collapse;
-      width: 50%;
-    }
-    th, td {
-      border: 1px solid #555;
-      padding: 10px;
+      text-align: left;
+      overflow-y: auto;
+      height: 300px;
+      box-shadow: 0 0 10px #00ffcc33;
     }
   </style>
 </head>
 <body>
   <h1>✈️ FlyWithObed Live Aviator Dashboard</h1>
-  <div id="status">🟢 Connecting...</div>
-  <div id="multiplier">🛩️ 1.00x</div>
-  <table>
-    <thead>
-      <tr><th>Round</th><th>Crash Point</th></tr>
-    </thead>
-    <tbody id="history"></tbody>
-  </table>
+  <p>Connecting to Aviator Live...</p>
+  <div class="log" id="log"></div>
 
   <script>
-    const socket = io();
-    const status = document.getElementById("status");
-    const multiplierDisplay = document.getElementById("multiplier");
-    const historyTable = document.getElementById("history");
+    const logDiv = document.getElementById("log");
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${window.location.host}`);
 
-    socket.on("welcome", () => {
-      status.textContent = "✅ Connected to live server";
-    });
+    function addLog(msg) {
+      const p = document.createElement("p");
+      p.textContent = msg;
+      logDiv.appendChild(p);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
 
-    socket.on("roundStart", (data) => {
-      status.textContent = `🟢 Round ${data.round} started (target ${data.target}x)`;
-      multiplierDisplay.textContent = `🛩️ 1.00x`;
-    });
-
-    socket.on("multiplierUpdate", (data) => {
-      multiplierDisplay.textContent = `🛩️ ${data.multiplier.toFixed(2)}x`;
-    });
-
-    socket.on("roundCrash", (data) => {
-      status.textContent = `💥 Round ${data.round} crashed at ${data.crashPoint}x`;
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${data.round}</td><td>${data.crashPoint}x</td>`;
-      historyTable.prepend(row);
-    });
+    ws.onopen = () => addLog("✅ Connected to FlyWithObed Aviator API");
+    ws.onmessage = (event) => addLog(event.data);
+    ws.onerror = (err) => addLog("❌ Connection error");
   </script>
 </body>
 </html>
+
+
