@@ -1,13 +1,18 @@
 {
-  "name": "flywithobed-livebet",
+  "name": "flywithobed-dashboard",
   "version": "1.0.0",
+  "description": "FlyWithObed Live Aviator Dashboard",
   "main": "server.js",
-  "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "echo 'No build step required'"
   },
+  "author": "Obed",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "ws": "^8.17.0",
-    "
+    "cors": "^2.8.5"
+  }
+}
 
